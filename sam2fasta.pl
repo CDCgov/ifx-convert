@@ -6,13 +6,15 @@ use Storable;
 use Getopt::Long;
 GetOptions(
 		'use-storable|S' => \$useStorable,
-		'typical-alignment|T' => \$typicalFormat
+		'typical-alignment|T' => \$typicalFormat,
+		'print-inserts|P' => \$printInserts
 	);
 
 if ( scalar(@ARGV) != 3 && scalar(@ARGV) != 2 ) {
 	$message = "Usage:\n\tperl $0 <ref> <sam> [prefix]\n";
 	$message .= "\t\t-O|--use-storable\tUse storable objects rather than FASTA.\n";
 	$message .= "\t\t-T|--typical-alignment\tTypical alignment format.\n";
+	$message .= "\t\t-P|--print-inserts\tPrinter insertion table (STDERR or file based on prefix).\n";
 	die($message."\n");
 }
 
@@ -125,8 +127,14 @@ if ( $useStorable ) {
 } else {
 	if ( $stdout ) {
 		*FASTA = *STDOUT;
+		if ( $printInserts ) {
+			*INSRT = *STDERR;
+		}
 	} else {
 		open(FASTA,'>',$ARGV[2].'.fasta') or die("Cannot open $ARGV[2].fasta for writing.\n");
+		if ( $printInserts ) {
+			open(INSRT,'>',$ARGV[2].'.ins.txt') or die("Cannot open $ARGV[2].ins.txt for writing.\n");
+		}
 	}
 
 	for($K=0;$K<scalar(@sam);$K++) {
@@ -142,18 +150,14 @@ if ( $useStorable ) {
 
 		if ( $REF_NAME eq $rn ) {
 			@NTs = split('',uc($seq));
-			@QCs = split('',$qual);
-			@Qint = unpack("c* i*",$qual);
 			@cigars = split('',$cigar);
 			$rpos=$pos-1;
 			$qpos=0;
 			
 			if ( $rpos > 0 ) {
 				$aln = $D x $rpos; 
-				$qAln = ' ' x $rpos;
 			} else {
 				$aln = '';
-				$qAln = '';
 			}
 			
 			while($cigar =~ /(\d+)([MIDNSHP])/g ) {
@@ -161,23 +165,21 @@ if ( $useStorable ) {
 				$op=$2;
 				if ( $op eq 'M' ) {
 					for(1..$inc) {
-						$qAln .= $QCs[$qpos];
 						$aln .= $NTs[$qpos];
 						$qpos++; $rpos++;
 					}
 				} elsif ( $op eq 'D' ) {
-					$qAln .= ' ' x $inc;
 					$aln .= '-' x $inc;
 					for(1..$inc) {
 						$rpos++;
 					}
 				} elsif( $op eq 'I' ) {
+					if ( $printInserts ) { print INSRT $qname,"\t",($rpos),"\t",substr($seq,$qpos,$inc),"\n"; }
 					$qpos += $inc;
 				} elsif( $op eq 'S' ) {
 					$qpos += $inc;
 				} elsif( $op eq 'N' ) {
 					$aln .= $N x $inc;
-					$qAln .= ' ' x $inc;
 					$rpos += $inc;
 				} elsif ( $op eq 'H' ) {
 					next;
@@ -186,12 +188,14 @@ if ( $useStorable ) {
 				}
 			}
 			$aln .= $D x (($REF_N)-$rpos);
-			$qAln .= ' ' x (($REF_N)-$rpos);
 			print FASTA '>',$qname,"\n",$aln,"\n";
 		}
 	}
 
 	if ( !$stdout ) {
+		if ( $printInserts ) {
+			close(INSRT);
+		}
 		close(FASTA);
 	}
 }

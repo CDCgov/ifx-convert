@@ -8,8 +8,9 @@ GetOptions(
 		'per-site|P' => \$perSite,
 		'enclose|E' => \$enclose,
 		'delimiter|D=s' => \$delim,
-		'extra-name|N=s' => \$name
-		);
+		'extra-name|N=s' => \$name,
+		'single-line-delimiter|S=s' => \$sDelim
+	);
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message = "Usage:\n\tperl $0 <annotated.fasta> [options]\n";
@@ -19,6 +20,12 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t-D|--delimiter <CHAR>\tDelimiter for output.\n";
 	$message .= "\t\t-N|--extra-name <STR>\tExtra name field to add to every row.\n";
 	die($message."\n");
+}
+
+if ( defined($sDelim) ) {
+	$singleLine = 1;
+} else {
+	$singleLine = 0;
 }
 
 if ( defined($CSV) ) {
@@ -64,6 +71,8 @@ while( $record = <> ) {
 		for( $pos=0;$pos<$length;$pos++ ) {
 			print $q,$header,$q,$extraField,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
 		}
+	} elsif ( $singleLine ) {
+		print $q,$header,$extraField,$q,$delim,$q,join($sDelim,split('',$sequence)),$q,"\n";
 	} else {
 		print $q,$header,$extraField,$q,$delim,$q,$sequence,$q,"\n";
 	}
@@ -76,4 +85,3 @@ while( $record = <> ) {
 	$string =~ /^\s*(.*?)\s*$/;
  	return $1;
 }
-

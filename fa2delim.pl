@@ -13,9 +13,9 @@ GetOptions(
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message = "Usage:\n\tperl $0 <annotated.fasta> [options]\n";
-	$message .= "\t\t-P|--per-site\tOne row per site.\n";
-	$message .= "\t\t-E|--enclose\tEnclose fields in quotes.\n";
-	$message .= "\t\t-C|--csv-format\tUse csv delimiter (tab default).\n";
+	$message .= "\t\t-P|--per-site\t\tOne row per site.\n";
+	$message .= "\t\t-E|--enclose\t\tEnclose fields in quotes.\n";
+	$message .= "\t\t-C|--csv-format\t\tUse csv delimiter (tab default).\n";
 	$message .= "\t\t-D|--delimiter <CHAR>\tDelimiter for output.\n";
 	$message .= "\t\t-N|--extra-name <STR>\tExtra name field to add to every row.\n";
 	die($message."\n");

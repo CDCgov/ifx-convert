@@ -9,7 +9,9 @@ GetOptions(
 		'enclose|E' => \$enclose,
 		'delimiter|D=s' => \$delim,
 		'extra-name|N=s' => \$name,
-		'single-line-delimiter|S=s' => \$sDelim
+		'seq-delim|S=s' => \$sDelim,
+		'codon-triplets|T' => \$triplets,
+		'header-delim|H=s' => \$headerDelim
 	);
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
@@ -19,6 +21,8 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t-C|--csv-format\t\tUse csv delimiter (tab default).\n";
 	$message .= "\t\t-D|--delimiter <CHAR>\tDelimiter for output.\n";
 	$message .= "\t\t-N|--extra-name <STR>\tExtra name field to add to every row.\n";
+	$message .= "\t\t-S|--seq-delim <CHAR>\tCharacter delimiter for the string.\n";
+	$message .= "\t\t-T|--codon-triplets\tAssumes data is in triplets for (-P and -S options).\n";
 	die($message."\n");
 }
 
@@ -33,7 +37,6 @@ if ( defined($CSV) ) {
 	$enclose = 1;
 } elsif ( !defined($delim) ) {
 	$delim = "\t";
-	$enclose = 0;
 }
 
 if ( $enclose ) {
@@ -64,17 +67,35 @@ while( $record = <> ) {
 		$header =~ tr/'/\'/;
 		$sequence =~ tr/'//d;
 	}
-
 	$length = length($sequence);
 
+	if ( $headerDelim ) {
+		@fields = split(/\Q$headerDelim\E/,$header);
+		for($i=0;$i<scalar(@fields);$i++ ) {
+			$fields[$i] = $q.$fields[$i].$q;
+		}
+		$header = join($delim,@fields);
+	}
+
 	if ( $perSite ) {
-		for( $pos=0;$pos<$length;$pos++ ) {
-			print $q,$header,$q,$extraField,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
+		if ( $triplets ) {
+			for( $pos=0;$pos<$length;$pos += 3 ) {
+				print $header,$extraField,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
+			}
+		} else {
+			for( $pos=0;$pos<$length;$pos++ ) {
+				print $header,$extraField,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
+			}
 		}
 	} elsif ( $singleLine ) {
-		print $q,$header,$extraField,$q,$delim,$q,join($sDelim,split('',$sequence)),$q,"\n";
+		if ( $triplets ) {
+			$sequence = join($sDelim, ($sequence =~ /.{3}/g) );
+		} else{
+			$sequence = join($sDelim,split('',$sequence));
+		}
+		print $header,$extraField,$delim,$q,$sequence,$q,"\n";
 	} else {
-		print $q,$header,$extraField,$q,$delim,$q,$sequence,$q,"\n";
+		print $header,$extraField,$delim,$q,$sequence,$q,"\n";
 	}
 }
 

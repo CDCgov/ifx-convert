@@ -3,14 +3,16 @@
 use Getopt::Long;
 GetOptions( 'input-delimiter|I=s' => \$inD,
 	    'output-delimiter|O=s' => \$outD,
-	    'strip-gap-chars|G' => \$stripGaps
+	    'strip-gap-chars|G' => \$stripGaps,
+	    'jump-header-line|J' => \$jumpHeader 
 	    );
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message = "Usage:\n\tperl $0 <delimited.txt> [options]\n";
 	$message .= "\t\t-I|--input-delimiter <CHAR>\tParsing delimiter for input, default <tab>.\n";
+	$message .= "\t\t-J|--jump-header-line\t\tSkip first line when processing.\n";
 	$message .= "\t\t-O|--output-delimiter <CHAR>\tParsing delimiter for output header, default is pipe '|'.\n";
-	$message .= "\t\t-G|--strip-gap-chars\tStrip gap characters found in sequences: '.-~:'\n";
+	$message .= "\t\t-G|--strip-gap-chars\t\tStrip gap characters found in sequences: '.-~:'\n";
 	die($message."\n");
 }
 
@@ -25,6 +27,7 @@ if ( !defined($outD) ) {
 # discover sequence field
 $/ = undef;
 @lines = split(/\r\n|\n|\r/, <>);
+if ( $jumpHeader ) { $junk = shift(@lines); }
 chomp(@lines);
 $firstLine = shift(@lines);
 @fields = split($inD,$firstLine);

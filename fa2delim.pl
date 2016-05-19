@@ -13,8 +13,7 @@ GetOptions(
 		'codon-triplets|T' => \$triplets,
 		'header-delim|H=s' => \$headerDelim,
 		'add-length|L' => \$addLength,
-		'add-hash|A' => \$addHash,
-		'jump-header-line|J' => \$jumpHeader 
+		'add-hash|A' => \$addHash
 	);
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
@@ -24,11 +23,10 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t-C|--csv-format\t\tUse csv delimiter (tab default).\n";
 	$message .= "\t\t-D|--delimiter <CHAR>\tDelimiter for output.\n";
 	$message .= "\t\t-N|--extra-name <STR>\tExtra name field to add to every row.\n";
-	$message .= "\t\t-L|--add-length\tAdd field for sequence length.\n";
-	$message .= "\t\t-A|--add-hash\tAdd field for sequence hash.\n";
+	$message .= "\t\t-L|--add-length\t\tAdd field for sequence length.\n";
+	$message .= "\t\t-A|--add-hash\t\tAdd field for sequence hash.\n";
 	$message .= "\t\t-S|--seq-delim <CHAR>\tCharacter delimiter for the string.\n";
 	$message .= "\t\t-T|--codon-triplets\tAssumes data is in triplets for (-P and -S options).\n";
-	$message .= "\t\t-J|--jump-header-line\tSkip first line when processing.\n";
 	die($message."\n");
 }
 
@@ -60,7 +58,6 @@ if ( !defined($name) ) {
 $lengthField = '';
 $hashField = '';
 $/ = ">";
-if ( $jumpHeader ) { $jump = <>; }
 while( $record = <> ) {
 	chomp($record);
 	@lines = split(/\r\n|\n|\r/, $record);

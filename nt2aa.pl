@@ -10,18 +10,23 @@ GetOptions(	'strip-gapped|S'=>\$stripGapped,
 		'reading-frame-mode|R' => \$selectFrame,
 		'partial-codon|P' => \$usePartialCodons,
 		'adjust-gaps|A' => \$adjustGaps,
-		'missing-data|M' => \$missingData
+		'missing-data|M' => \$missingData,
+		'stop-translation|T' => \$stopTranslation,
+		'output-codons|C' => \$codonsOnly,
+		'end-3p-missing|E' => \$chopDownstreamMissing
 	);
 
 if ( -t STDIN && scalar(@ARGV) != 1 ) {
 	$message = "Usage:\n\tperl $0 <nts.fasta> [options]\n";
-	$message .= "\t\t--strip-gapped|-S\tStrip gaps before translating.\n";
-	$message .= "\t\t--warning-skip|-W\tSkip and print a warning rather than throwing an error.\n";
-	$message .= "\t\t--no-end|-N\t\tSkip the last codon (useful when it is the stop site).\n";
-	$message .= "\t\t--read-frame-mode|-R\tFind longest ORF in sequence for translation.\n";
-	$message .= "\t\t--adjust-gaps|-A\tTry to adjust partial codons to be full codons.\n";
-	$message .= "\t\t--partial-codon|-P\tUse '~' to express partial codons.\n";
-	$message .= "\t\t--missing-data|-M\tUse '.' to express missing data.\n";
+	$message .= "\t\t-S|--strip-gapped\tStrip gaps before translating.\n";
+	$message .= "\t\t-W|--warning-skip\tSkip and print a warning rather than throwing an error.\n";
+	$message .= "\t\t-N|--no-end\t\tSkip the last codon (useful when it is the stop site).\n";
+	$message .= "\t\t-R|--read-frame-mode\tFind longest ORF in sequence for translation.\n";
+	$message .= "\t\t-A|--adjust-gaps\tTry to adjust partial codons to be full codons.\n";
+	$message .= "\t\t-P|--partial-codon\tUse '~' to express partial codons.\n";
+	$message .= "\t\t-M|--missing-data\tUse '.' to express missing data.\n";
+	$message .= "\t\t-T|--stop-translation\tEnd sequence after first stop codon.\n";
+	$message .= "\t\t-E|--end-3p-missing\tChop downstream missing.\n";
 	die($message."\n");
 }
 
@@ -170,31 +175,69 @@ while($record = <> ) {
 		}
 	}
 
-	$aa = '';
-	for( $i = 0; $i < $length; $i +=3 ) {
-		$codon = uc(substr($sequence, $i, 3));
-		if ( $codon =~ /[-.~]/ ) {
-			if ( $stripGapped ) {
-				next;
-			} else {
-				if ( $missingData && $codon eq '...' ) {
-					$aa .= '.';
-				} elsif ( $usePartialCodons && $codon =~ /[^.~-]/ ) {
-					$aa .= '~';
+	if ( $codonsOnly ) {
+		$codons = '';
+		for( $i = 0; $i < $length; $i +=3 ) {
+			$codon = uc(substr($sequence, $i, 3));
+			$codons .= $codon;
+			if ( $stopTranslation && $gc{$codon} eq '*' ) {
+				last;
+			}
+		}
+
+		if ( $noEndCodon ) {
+			$codons = substr($codons,0,-3);
+			
+		}
+		
+		if ( $chopDownstreamMissing ) {
+			$codons =~ s/(\.{3})+$//;
+		}
+
+		if ( length($codons) % 3 != 0 ) {
+			die("Unexpected error: $header not in codon triplets.\n");
+		}
+
+		print '>',$header,"\n",$codons,"\n";
+
+	} else {
+		$aa = '';
+		for( $i = 0; $i < $length; $i +=3 ) {
+			$codon = uc(substr($sequence, $i, 3));
+
+			if ( $codon =~ /[-.~]/ ) {
+				if ( $stripGapped ) {
+					next;
 				} else {
-					$aa .= '-';
+					if ( $missingData && $codon eq '...' ) {
+						$aa .= '.';
+					} elsif ( $usePartialCodons && $codon =~ /[^.~-]/ ) {
+						$aa .= '~';
+					} else {
+						$aa .= '-';
+					}
+				}
+			} elsif ( !defined($gc{$codon}) ) {
+				$aa .= 'X';
+			} else {
+				$aa .= $gc{$codon};
+				if ( $stopTranslation && $gc{$codon} eq '*' ) {
+					#$leftOver = int( ($length-$i-3) / 3 );
+					#$aa .= ':'x $leftOver;
+					last;
 				}
 			}
-		} elsif ( !defined($gc{$codon}) ) {
-			$aa .= 'X';
-		} else {
-			$aa .= $gc{$codon};
 		}
-	}
 
-	if ( $noEndCodon ) {
-		chop($aa);
+		if ( $noEndCodon ) {
+			chop($aa);
+		}
+
+		if ( $chopDownstreamMissing ) {
+			$aa =~ s/(\.+)$//;
+		}
+
+		print '>',$header,"\n",$aa,"\n";
 	}
-	print '>',$header,"\n",$aa,"\n";
 }
 close(IN);

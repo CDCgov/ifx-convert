@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 # Converts fasta to a delimited format
 
-
+use Digest::MD5 qw(md5_hex);
 use Getopt::Long;
 GetOptions( 
 		'csv-format|C' => \$CSV,
@@ -11,7 +11,10 @@ GetOptions(
 		'extra-name|N=s' => \$name,
 		'seq-delim|S=s' => \$sDelim,
 		'codon-triplets|T' => \$triplets,
-		'header-delim|H=s' => \$headerDelim
+		'header-delim|H=s' => \$headerDelim,
+		'add-length|L' => \$addLength,
+		'add-hash|A' => \$addHash,
+		'jump-header-line|J' => \$jumpHeader 
 	);
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
@@ -21,8 +24,11 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t-C|--csv-format\t\tUse csv delimiter (tab default).\n";
 	$message .= "\t\t-D|--delimiter <CHAR>\tDelimiter for output.\n";
 	$message .= "\t\t-N|--extra-name <STR>\tExtra name field to add to every row.\n";
+	$message .= "\t\t-L|--add-length\tAdd field for sequence length.\n";
+	$message .= "\t\t-A|--add-hash\tAdd field for sequence hash.\n";
 	$message .= "\t\t-S|--seq-delim <CHAR>\tCharacter delimiter for the string.\n";
 	$message .= "\t\t-T|--codon-triplets\tAssumes data is in triplets for (-P and -S options).\n";
+	$message .= "\t\t-J|--jump-header-line\tSkip first line when processing.\n";
 	die($message."\n");
 }
 
@@ -51,7 +57,10 @@ if ( !defined($name) ) {
 	$extraField = $delim.$q.$name.$q;
 }
 
+$lengthField = '';
+$hashField = '';
 $/ = ">";
+if ( $jumpHeader ) { $jump = <>; }
 while( $record = <> ) {
 	chomp($record);
 	@lines = split(/\r\n|\n|\r/, $record);
@@ -77,14 +86,22 @@ while( $record = <> ) {
 		$header = join($delim,@fields);
 	}
 
+	if ( $addLength ) {
+		$lengthField = $delim.length($sequence);
+	}
+
+	if ( $addHash ) {
+		$hashField = $delim.$q.md5_hex($sequence).$q;
+	}
+
 	if ( $perSite ) {
 		if ( $triplets ) {
 			for( $pos=0;$pos<$length;$pos += 3 ) {
-				print $header,$extraField,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
+				print $header,$extraField,$hashField,$lengthField,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
 			}
 		} else {
 			for( $pos=0;$pos<$length;$pos++ ) {
-				print $header,$extraField,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
+				print $header,$extraField,$hashField,$lengthField,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
 			}
 		}
 	} elsif ( $singleLine ) {
@@ -93,9 +110,9 @@ while( $record = <> ) {
 		} else{
 			$sequence = join($sDelim,split('',$sequence));
 		}
-		print $header,$extraField,$delim,$q,$sequence,$q,"\n";
+		print $header,$extraField,$hashField,$lengthField,$delim,$q,$sequence,$q,"\n";
 	} else {
-		print $header,$extraField,$delim,$q,$sequence,$q,"\n";
+		print $header,$extraField,$hashField,$lengthField,$delim,$q,$sequence,$q,"\n";
 	}
 }
 

@@ -2,12 +2,15 @@
 
 use Getopt::Long;
 GetOptions( 'input-delimiter|I=s' => \$inD,
-	    'output-delimiter|O=s' => \$outD );
+	    'output-delimiter|O=s' => \$outD,
+	    'strip-gap-chars|G' => \$stripGaps
+	    );
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message = "Usage:\n\tperl $0 <delimited.txt> [options]\n";
 	$message .= "\t\t-I|--input-delimiter <CHAR>\tParsing delimiter for input, default <tab>.\n";
 	$message .= "\t\t-O|--output-delimiter <CHAR>\tParsing delimiter for output header, default is pipe '|'.\n";
+	$message .= "\t\t-G|--strip-gap-chars\tStrip gap characters found in sequences: '.-~:'\n";
 	die($message."\n");
 }
 
@@ -29,7 +32,7 @@ $maxLen = 0; $seqField  = 0;
 foreach $i ( 0 .. $#fields ) {
 	$tmp = $fields[$i];
 	$tmp =~ tr/ //d;
-	if ( $tmp =~ /^[A-Za-z.~-]+$/ ) {
+	if ( $tmp =~ /^[A-Za-z.~:-]+$/ ) {
 		if ( length($tmp) > $maxLen ) {
 			$seqField = $i;
 			$maxLen = length($tmp);
@@ -50,6 +53,9 @@ foreach $i ( 0 .. $#fields ) {
 	}
 }
 $seq =~ tr/ //d;
+if ( $stripGaps ) {
+	$seq =~ tr/.:~-//d;
+}
 if ( substr($header,0,1) ne '>' ) { print '>'; }
 print $header,"\n",$seq,"\n";
 
@@ -58,6 +64,9 @@ foreach $line ( @lines ) {
 	@fields = split($inD,$line);
 	$seq = $fields[$seqField]; $header = '';
 	$seq =~ tr/ //d;
+	if ( $stripGaps ) {
+		$seq =~ tr/.:~-//d;
+	}
 	foreach $i ( 0 .. $#fields ) {
 		if ( $i != $seqField ) {
 			if ( $header ne '' ) {

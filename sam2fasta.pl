@@ -7,14 +7,16 @@ use Getopt::Long;
 GetOptions(
 		'use-storable|S' => \$useStorable,
 		'typical-alignment|T' => \$typicalFormat,
-		'print-inserts|P' => \$printInserts
+		'print-inserts|P' => \$printInserts,
+		'amend-missing|M=s' => \$amendMissingFile
 	);
 
 if ( scalar(@ARGV) != 3 && scalar(@ARGV) != 2 ) {
 	$message = "Usage:\n\tperl $0 <ref> <sam> [prefix]\n";
-	$message .= "\t\t-O|--use-storable\tUse storable objects rather than FASTA.\n";
-	$message .= "\t\t-T|--typical-alignment\tTypical alignment format.\n";
-	$message .= "\t\t-P|--print-inserts\tPrinter insertion table (STDERR or file based on prefix).\n";
+	$message .= "\t\t-O|--use-storable\t\tUse storable objects rather than FASTA.\n";
+	$message .= "\t\t-T|--typical-alignment\t\tTypical alignment format.\n";
+	$message .= "\t\t-P|--print-inserts\t\tPrinter insertion table (STDERR or file based on prefix).\n";
+	$message .= "\t\t-M|--amend-missing <FILE>\tAmend missing 5' and 3' from alignment using the original file.\n";
 	die($message."\n");
 }
 
@@ -27,6 +29,26 @@ if ( scalar(@ARGV) == 2 ) {
 
 $REisBase = qr/[ATCG]/;
 $REgetMolID = qr/(.+?)[_ ]([12]):.+/;
+
+if ( defined($amendMissingFile) ) {
+	open(MISS,'<',$amendMissingFile) or die("Cannot open $amendMissingFile for reading.\n");
+	$/ = ">"; %seqByID = ();
+	while($record = <MISS>) {
+		chomp($record);
+		@lines = split(/\r\n|\n|\r/, $record);
+		$id = shift(@lines);
+		$seq = uc(join('',@lines));
+		if ( length($seq) < 1 ) {
+			next;
+		}
+		$seqByID{$id} = $seq;
+	}
+	close(MISS);
+	$amendMissing = 1;
+} else {
+	$amendMissing = 0;
+}
+
 
 $/ = ">"; $REF_NAME = $REF_SEQ = $REF_N = '';
 open(REF,'<',$ARGV[0]) or die("Cannot open $ARGV[0] for reading.\n");
@@ -53,8 +75,8 @@ if ( $typicalFormat ) {
 	$D = '-';
 	$N = '-';
 } else {
-	$N = 'N';
 	$D = '.';
+	$N = 'N';
 }
 
 
@@ -155,11 +177,12 @@ if ( $useStorable ) {
 			$qpos=0;
 			
 			if ( $rpos > 0 ) {
-				$aln = $D x $rpos; 
+				$preAln = $D x $rpos; 
 			} else {
-				$aln = '';
+				$preAln = ''; 
 			}
 			
+			$aln = '';
 			while($cigar =~ /(\d+)([MIDNSHP])/g ) {
 				$inc=$1;
 				$op=$2;
@@ -187,8 +210,35 @@ if ( $useStorable ) {
 					die("Extended CIGAR ($op) not yet supported.\n");
 				}
 			}
-			$aln .= $D x (($REF_N)-$rpos);
-			print FASTA '>',$qname,"\n",$aln,"\n";
+
+			$postAln = '';
+			$postAln = $D x (($REF_N)-$rpos);
+
+			if ( $amendMissing ) {
+#				if ( $cigar =~ /^(\d+)M$/ && defined($seqByID{$qname}) ) {
+				if ( defined($seqByID{$qname}) ) {
+					$original = $seqByID{$qname};
+					$O = length($original);
+					$L = length($aln);
+					if ( $original =~ /$aln/ ) {
+						($start,$stop) = ($-[0],$+[0]);
+						($preO,$postO) = ( $start, ($O - $stop) );
+						($preL,$postL) = (length($preAln),length($postAln));
+						
+						if ( $preL > $preO ) { $preM = $preO; } else { $preM = $preL; }
+						if ( $postL > $postO ) { $postM = $postO; } else { $postM = $postL; }
+
+						if ( $preM > 0 && $preL < 10 ) {
+							$preAln = ($D x ($preL-$preM)) . substr($original,$start - $preM,$preM);
+						}
+
+						if ( $postM > 0 && $postL < 10 ) {
+							$postAln = substr($original,$stop,$postM) . ($D x ($postL-$postM));
+						}
+					}
+				}
+			}
+			print FASTA '>',$qname,"\n",$preAln,$aln,$postAln,"\n";
 		}
 	}
 

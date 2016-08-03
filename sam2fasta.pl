@@ -198,6 +198,7 @@ if ( $useStorable ) {
 					}
 				} elsif( $op eq 'I' ) {
 					if ( $printInserts ) { print INSRT $qname,"\t",($rpos),"\t",substr($seq,$qpos,$inc),"\n"; }
+					if ( $amendMissing ) { $inserts{$qname}{$rpos} = substr($seq,$qpos,$inc); }
 					$qpos += $inc;
 				} elsif( $op eq 'S' ) {
 					$qpos += $inc;
@@ -215,12 +216,20 @@ if ( $useStorable ) {
 			$postAln = $D x (($REF_N)-$rpos);
 
 			if ( $amendMissing ) {
-#				if ( $cigar =~ /^(\d+)M$/ && defined($seqByID{$qname}) ) {
 				if ( defined($seqByID{$qname}) ) {
+
+					$aln2 = $preAln.$aln.$postAln; $offset = 0;
+					foreach $pos ( sort { $a <=> $b } keys(%{$inserts{$qname}}) ) {
+						$insert = $inserts{$qname}{$pos};
+
+						substr($aln2,$pos+$offset,0) = $insert;
+						$offset += length($insert);
+					}
+					$aln2 =~ tr/.-//d;
 					$original = $seqByID{$qname};
 					$O = length($original);
 					$L = length($aln);
-					if ( $original =~ /$aln/ ) {
+					if ( $original =~ /\Q$aln2\E/ ) {
 						($start,$stop) = ($-[0],$+[0]);
 						($preO,$postO) = ( $start, ($O - $stop) );
 						($preL,$postL) = (length($preAln),length($postAln));

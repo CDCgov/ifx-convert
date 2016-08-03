@@ -13,7 +13,11 @@ GetOptions(
 		'codon-triplets|T' => \$triplets,
 		'header-delim|H=s' => \$headerDelim,
 		'add-length|L' => \$addLength,
-		'add-hash|A' => \$addHash
+		'add-size|Z' => \$addSize,
+		'add-hash|A' => \$addHash,
+		'inserts|I=s' => \$insertsFile,
+		'use-original|O' => \$useOriginal,
+		'use-unaligned|U' => \$useUnaligned
 	);
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
@@ -24,6 +28,7 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t-D|--delimiter <CHAR>\tDelimiter for output.\n";
 	$message .= "\t\t-N|--extra-name <STR>\tExtra name field to add to every row.\n";
 	$message .= "\t\t-L|--add-length\t\tAdd field for sequence length.\n";
+	$message .= "\t\t-Z|--add-size\t\tAdd field for ungapped size.\n";
 	$message .= "\t\t-A|--add-hash\t\tAdd field for sequence hash.\n";
 	$message .= "\t\t-S|--seq-delim <CHAR>\tCharacter delimiter for the string.\n";
 	$message .= "\t\t-T|--codon-triplets\tAssumes data is in triplets for (-P and -S options).\n";
@@ -55,25 +60,40 @@ if ( !defined($name) ) {
 	$extraField = $delim.$q.$name.$q;
 }
 
-$lengthField = '';
-$hashField = '';
-$/ = ">";
+if ( defined($insertsFile) ) {
+	%inserts = (); $/ = "\n";
+	open(INS,'<',$insertsFile) or die("Cannot open $insertsTable for reading.\n");
+	@lines = <INS>; chomp(@lines);
+	foreach $line ( @lines ) {
+		($id,$pos,$insert) = split("\t",$line);
+		# position is upstream base for index-1
+		# ergo, no adjustment is needed for index-0
+		$inserts{$id}{$pos} = $insert;
+	}
+	close(INS);
+	$tryInsertions = 1;
+} else {
+	$tryInsertions = 0;
+}
+
+$lengthField = ''; $hashField = ''; $/ = ">";
 while( $record = <> ) {
 	chomp($record);
 	@lines = split(/\r\n|\n|\r/, $record);
-	$header = trim(shift(@lines));
-	$sequence = uc(join('',@lines));
+	$id = $header = trim(shift(@lines));
+	$sequenceOriginal = $sequence = uc(join('',@lines));
 
-	$length = length($sequence);
-	if ( $length == 0 ) {
-		next;	
-	}
+	if ( length($sequence) == 0 ) { next; }
+	if ( $enclose ) { $header =~ tr/'/\'/; $sequence =~ tr/'//d; }
 
-	if ( $enclose ) {
-		$header =~ tr/'/\'/;
-		$sequence =~ tr/'//d;
+	if ( $tryInsertions && defined($inserts{$id}) ) {
+		$offset = 0;
+		foreach $pos ( sort { $a <=> $b } keys(%{$inserts{$id}}) ) {
+			$insert = $inserts{$id}{$pos};
+			substr($sequence,int($pos)+$offset,0) = $insert;
+			$offset += length($insert);
+		}
 	}
-	$length = length($sequence);
 
 	if ( $headerDelim ) {
 		@fields = split(/\Q$headerDelim\E/,$header);
@@ -83,22 +103,31 @@ while( $record = <> ) {
 		$header = join($delim,@fields);
 	}
 
-	if ( $addLength ) {
-		$lengthField = $delim.length($sequence);
+	if ( $addLength ) { $lengthField = $delim.length($sequence); }
+
+	if ( $addSize || $addHash ) {
+		$sequenceForHash = $sequence; $sequenceForHash =~ tr/.-//d;
+		if ( $addSize ) { $sizeField = $delim.length($sequenceForHash); }
+		if ( $addHash ) { $hashField = $delim.$q.md5_hex($sequenceForHash).$q; }
 	}
 
-	if ( $addHash ) {
-		$hashField = $delim.$q.md5_hex($sequence).$q;
+	if ( $useOriginal ) { 
+		$sequence = $sequenceOriginal; 
+	} elsif ( $useUnaligned ) {
+		$sequence = $sequenceForHash;
 	}
+
+	$length = length($sequence);
+	
 
 	if ( $perSite ) {
 		if ( $triplets ) {
 			for( $pos=0;$pos<$length;$pos += 3 ) {
-				print $header,$extraField,$hashField,$lengthField,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
+				print $header,$extraField,$hashField,$lengthField,$sizeField,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
 			}
 		} else {
 			for( $pos=0;$pos<$length;$pos++ ) {
-				print $header,$extraField,$hashField,$lengthField,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
+				print $header,$extraField,$hashField,$lengthField,$sizeField,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
 			}
 		}
 	} elsif ( $singleLine ) {
@@ -107,15 +136,15 @@ while( $record = <> ) {
 		} else{
 			$sequence = join($sDelim,split('',$sequence));
 		}
-		print $header,$extraField,$hashField,$lengthField,$delim,$q,$sequence,$q,"\n";
+		print $header,$extraField,$hashField,$lengthField,$sizeField,$delim,$q,$sequence,$q,"\n";
 	} else {
-		print $header,$extraField,$hashField,$lengthField,$delim,$q,$sequence,$q,"\n";
+		print $header,$extraField,$hashField,$lengthField,$sizeField,$delim,$q,$sequence,$q,"\n";
 	}
 }
 
 # Trim function.
 # # Removes whitespace from the start and end of the string
- sub trim($) {
+sub trim($) {
  	my $string = shift;
 	$string =~ /^\s*(.*?)\s*$/;
  	return $1;

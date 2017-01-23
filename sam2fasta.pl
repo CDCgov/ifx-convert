@@ -8,7 +8,8 @@ GetOptions(
 		'use-storable|S' => \$useStorable,
 		'typical-alignment|T' => \$typicalFormat,
 		'print-inserts|P' => \$printInserts,
-		'amend-missing|M=s' => \$amendMissingFile
+		'amend-missing|M=s' => \$amendMissingFile,
+		'extend-to-stop|E' => \$extendToStop
 	);
 
 if ( scalar(@ARGV) != 3 && scalar(@ARGV) != 2 ) {
@@ -72,11 +73,9 @@ open(SAM,'<',$ARGV[1]) or die("Cannot open $ARGV[1] for reading.\n");
 close(SAM);
 
 if ( $typicalFormat ) {
-	$D = '-';
-	$N = '-';
+	$D = '-'; $N = '-';
 } else {
-	$D = '.';
-	$N = 'N';
+	$D = '.'; $N = 'N';
 }
 
 
@@ -243,6 +242,29 @@ if ( $useStorable ) {
 
 						if ( $postM > 0 && $postL < 10 ) {
 							$postAln = substr($original,$stop,$postM) . ($D x ($postL-$postM));
+						}
+					}
+
+					if ( defined($extendToStop) ) {
+						$suffix = $aln.$postAln;
+						$last3 = substr($suffix,-3);
+						if ( $last3 =~ /[A-Za-z]{3}/ && $last3 !~ /(TGA|TAA|TAG)/i ) {
+							if ( $original =~ /\Q$suffix\E/ ) {
+								$start2 = $+[0];
+								$tail  = substr($original,$start2,$O-$start2);
+								$T = length($tail);
+								if ( $T >= 3 ) {
+									$i = 0; $codons = '';
+									for($i=0;$i<$T;$i+=3) {
+										$codon = substr($tail,$i,3);
+										$codons .= $codon;
+										if ( $codon =~ m/(TGA|TAA|TAG)/i ) {
+											print INSRT $qname,"\t",$L,"\t",$codons,"\n";
+											last;
+										}
+									}
+								}
+							}
 						}
 					}
 				}

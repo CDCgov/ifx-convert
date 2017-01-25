@@ -77,24 +77,14 @@ open(SAM,'<',$ARGV[1]) or die("Cannot open $ARGV[1] for reading.\n");
 @sam = <SAM>; chomp(@sam);
 close(SAM);
 
-<<<<<<< HEAD
-if ( $typicalFormat ) {
-	$D = '-'; $N = '-';
-} else {
-	$D = '.'; $N = 'N';
-=======
 # baseline gap & spacer format
 if ( $inlineInserts ) {
-	$N = '.';
-	$D = '';
+	$D = ''; $N = '.';
 } elsif ( $typicalFormat ) {
-	$D = '-';
-	$N = '-';	
+	$D = '-'; $N = '-';	
 #SAM-like format
 } else {
-	$D = '.';	
-	$N = 'N';	
->>>>>>> feature1
+	$D = '.'; $N = 'N';	
 }
 
 

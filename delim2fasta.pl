@@ -35,7 +35,7 @@ $maxLen = 0; $seqField  = 0;
 foreach $i ( 0 .. $#fields ) {
 	$tmp = $fields[$i];
 	$tmp =~ tr/ //d;
-	if ( $tmp =~ /^[A-Za-z.~:-]+$/ ) {
+	if ( $tmp =~ /^[A-Za-z*.~:-]+$/ ) {
 		if ( length($tmp) > $maxLen ) {
 			$seqField = $i;
 			$maxLen = length($tmp);

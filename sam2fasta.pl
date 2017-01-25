@@ -18,7 +18,7 @@ if ( scalar(@ARGV) != 3 && scalar(@ARGV) != 2 ) {
 	$message .= "\t\t-T|--typical-alignment\t\tTypical alignment format.\n";
 	$message .= "\t\t-P|--print-inserts\t\tPrinter insertion table (STDERR or file based on prefix).\n";
 	$message .= "\t\t-M|--amend-missing <FILE>\tAmend missing 5' and 3' from alignment using the original file.\n";
-	$message .= "\t\t-E|--extend-to-stop\tAssumes -M is used. Allows post-sequence insertion extension.\n";
+	$message .= "\t\t-E|--extend-to-stop\t\tAssumes -M is used. Allows post-sequence insertion extension.\n";
 	die($message."\n");
 }
 

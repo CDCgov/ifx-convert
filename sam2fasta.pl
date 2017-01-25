@@ -8,17 +8,21 @@ GetOptions(
 		'use-storable|S' => \$useStorable,
 		'typical-alignment|T' => \$typicalFormat,
 		'print-inserts|P' => \$printInserts,
+		'print-inline-inserts|I' => \$inlineInserts,
 		'amend-missing|M=s' => \$amendMissingFile,
-		'extend-to-stop|E' => \$extendToStop
+		'extend-to-stop|E' => \$extendToStop,
+		'reverse-complement|R' => \$rev
 	);
 
 if ( scalar(@ARGV) != 3 && scalar(@ARGV) != 2 ) {
 	$message = "Usage:\n\tperl $0 <ref> <sam> [prefix]\n";
 	$message .= "\t\t-O|--use-storable\t\tUse storable objects rather than FASTA.\n";
 	$message .= "\t\t-T|--typical-alignment\t\tTypical alignment format.\n";
-	$message .= "\t\t-P|--print-inserts\t\tPrinter insertion table (STDERR or file based on prefix).\n";
+	$message .= "\t\t-P|--print-inserts\t\tPrint insertion table (STDERR or file based on prefix).\n";
+	$message .= "\t\t-I|--print-inline-inserts\tPrint inline insertions as lowercase.\n";
 	$message .= "\t\t-M|--amend-missing <FILE>\tAmend missing 5' and 3' from alignment using the original file.\n";
 	$message .= "\t\t-E|--extend-to-stop\t\tAssumes -M is used. Allows post-sequence insertion extension.\n";
+	$message .= "\t\t-R|--reverse-complement\t\tReverse complement the read if original was on complementary strand.\n";
 	die($message."\n");
 }
 
@@ -73,10 +77,24 @@ open(SAM,'<',$ARGV[1]) or die("Cannot open $ARGV[1] for reading.\n");
 @sam = <SAM>; chomp(@sam);
 close(SAM);
 
+<<<<<<< HEAD
 if ( $typicalFormat ) {
 	$D = '-'; $N = '-';
 } else {
 	$D = '.'; $N = 'N';
+=======
+# baseline gap & spacer format
+if ( $inlineInserts ) {
+	$N = '.';
+	$D = '';
+} elsif ( $typicalFormat ) {
+	$D = '-';
+	$N = '-';	
+#SAM-like format
+} else {
+	$D = '.';	
+	$N = 'N';	
+>>>>>>> feature1
 }
 
 
@@ -197,6 +215,7 @@ if ( $useStorable ) {
 						$rpos++;
 					}
 				} elsif( $op eq 'I' ) {
+					if ( $inlineInserts ) { $aln .= lc(substr($seq,$qpos,$inc)); }
 					if ( $printInserts ) { print INSRT $qname,"\t",($rpos),"\t",substr($seq,$qpos,$inc),"\n"; }
 					if ( $amendMissing ) { $inserts{$qname}{$rpos} = substr($seq,$qpos,$inc); }
 					$qpos += $inc;
@@ -270,7 +289,15 @@ if ( $useStorable ) {
 					}
 				}
 			}
-			print FASTA '>',$qname,"\n",$preAln,$aln,$postAln,"\n";
+
+			print FASTA '>',$qname,"\n";
+			if ( defined($rev) && $flag == 16 ) {
+				$tmp = reverse($preAln.$aln.$postAln);
+				$tmp =~ tr/gcatrykmbvdhuGCATRYKMBVDHU/cgtayrmkvbhdaCGTAYRMKVBHDA/;
+				print $tmp,"\n";
+			} else {
+				print FASTA $preAln,$aln,$postAln,"\n";
+			}
 		}
 	}
 

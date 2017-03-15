@@ -27,10 +27,13 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t-C|--csv-format\t\tUse csv delimiter (tab default).\n";
 	$message .= "\t\t-D|--delimiter <CHAR>\tDelimiter for output.\n";
 	$message .= "\t\t-N|--extra-name <STR>\tExtra name field to add to every row.\n";
-	$message .= "\t\t-L|--add-length\t\tAdd field for sequence length.\n";
-	$message .= "\t\t-Z|--add-size\t\tAdd field for ungapped size.\n";
+	$message .= "\t\t-Z|--add-size\t\tAdd field for ungapped size (unaligned + ins).\n";
 	$message .= "\t\t-A|--add-hash\t\tAdd field for sequence hash.\n";
+	$message .= "\t\t-L|--add-length\t\tAdd seq length field (aligned + ins).\n";
 	$message .= "\t\t-S|--seq-delim <CHAR>\tCharacter delimiter for the string.\n";
+	$message .= "\t\t-I|--inserts <FILE>\tTab delimited insertion file: ID<t>NTS<T>AA\n";
+	$message .= "\t\t-U|--use-unaligned\tPrint unaligned sequence/sites: unaligned + ins. Def: aligned + ins\n";	
+	$message .= "\t\t-O|--use-original\tPrint aligned sequence/sites: aligned - ins. Def: aligned + ins\n";	
 	$message .= "\t\t-T|--codon-triplets\tAssumes data is in triplets for (-P and -S options).\n";
 	die($message."\n");
 }
@@ -103,10 +106,12 @@ while( $record = <> ) {
 		$header = join($delim,@fields);
 	}
 
+	# length of the original sequence, plus any insertion
 	if ( $addLength ) { $lengthField = $delim.length($sequence); }
 
 	if ( $addSize || $addHash ) {
 		$sequenceForHash = $sequence; $sequenceForHash =~ tr/.-//d;
+		# the protein size does not include any alignment characters
 		if ( $addSize ) { $sizeField = $delim.length($sequenceForHash); }
 		if ( $addHash ) { $hashField = $delim.$q.md5_hex($sequenceForHash).$q; }
 	}
@@ -117,10 +122,11 @@ while( $record = <> ) {
 		$sequence = $sequenceForHash;
 	}
 
+	# the length for each codon and/or site can be unaligned (the one used in the Hash) or the original 
+	# the original sequence skips insertions, so they will not be printed herein
 	$length = length($sequence);
-	
-
 	if ( $perSite ) {
+		# one site/codon per record
 		if ( $triplets ) {
 			for( $pos=0;$pos<$length;$pos += 3 ) {
 				print $header,$extraField,$hashField,$lengthField,$sizeField,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
@@ -131,6 +137,7 @@ while( $record = <> ) {
 			}
 		}
 	} elsif ( $singleLine ) {
+		# one sequence per record
 		if ( $triplets ) {
 			$sequence = join($sDelim, ($sequence =~ /.{3}/g) );
 		} else{

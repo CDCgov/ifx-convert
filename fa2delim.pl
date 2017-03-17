@@ -109,7 +109,7 @@ while( $record = <> ) {
 	# length of the original sequence, plus any insertion
 	if ( $addLength ) { $lengthField = $delim.length($sequence); }
 
-	if ( $addSize || $addHash ) {
+	if ( $addSize || $addHash || $useUnaligned ) {
 		$sequenceForHash = $sequence; $sequenceForHash =~ tr/.-//d;
 		# the protein size does not include any alignment characters
 		if ( $addSize ) { $sizeField = $delim.length($sequenceForHash); }

@@ -26,9 +26,8 @@ if ( !defined($outD) ) {
 
 # discover sequence field
 $/ = undef;
-@lines = split(/\r\n|\n|\r/, <>);
+@lines = split(/\r\n|\n|\r/, <>); chomp(@lines);
 if ( $jumpHeader ) { $junk = shift(@lines); }
-chomp(@lines);
 $firstLine = shift(@lines);
 @fields = split($inD,$firstLine);
 $maxLen = 0; $seqField  = 0;

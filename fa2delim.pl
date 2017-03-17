@@ -17,7 +17,8 @@ GetOptions(
 		'add-hash|A' => \$addHash,
 		'inserts|I=s' => \$insertsFile,
 		'use-original|O' => \$useOriginal,
-		'use-unaligned|U' => \$useUnaligned
+		'use-unaligned|U' => \$useUnaligned,
+		'show-if-insertion' => \$insertionApplied
 	);
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
@@ -35,6 +36,7 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t-U|--use-unaligned\tPrint unaligned sequence/sites: unaligned + ins. Def: aligned + ins\n";	
 	$message .= "\t\t-O|--use-original\tPrint aligned sequence/sites: aligned - ins. Def: aligned + ins\n";	
 	$message .= "\t\t-T|--codon-triplets\tAssumes data is in triplets for (-P and -S options).\n";
+	$message .= "\t\t   --show-if-insertion\tBoolean (true/false) added if insertion was put into the sequence.\n";
 	die($message."\n");
 }
 
@@ -79,7 +81,7 @@ if ( defined($insertsFile) ) {
 	$tryInsertions = 0;
 }
 
-$lengthField = ''; $hashField = ''; $/ = ">";
+$lengthField = ''; $hashField = ''; $hasInsertion = ''; $/ = ">";
 while( $record = <> ) {
 	chomp($record);
 	@lines = split(/\r\n|\n|\r/, $record);
@@ -89,7 +91,9 @@ while( $record = <> ) {
 	if ( length($sequence) == 0 ) { next; }
 	if ( $enclose ) { $header =~ tr/'/\'/; $sequence =~ tr/'//d; }
 
+	if ( $insertionApplied ) { $hasInsertion = $delim.'false'; }	
 	if ( $tryInsertions && defined($inserts{$id}) ) {
+		if ( $insertionApplied ) { $hasInsertion = $delim.'true'; }	
 		$offset = 0;
 		foreach $pos ( sort { $a <=> $b } keys(%{$inserts{$id}}) ) {
 			$insert = $inserts{$id}{$pos};
@@ -129,11 +133,11 @@ while( $record = <> ) {
 		# one site/codon per record
 		if ( $triplets ) {
 			for( $pos=0;$pos<$length;$pos += 3 ) {
-				print $header,$extraField,$hashField,$lengthField,$sizeField,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
+				print $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
 			}
 		} else {
 			for( $pos=0;$pos<$length;$pos++ ) {
-				print $header,$extraField,$hashField,$lengthField,$sizeField,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
+				print $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
 			}
 		}
 	} elsif ( $singleLine ) {
@@ -143,9 +147,9 @@ while( $record = <> ) {
 		} else{
 			$sequence = join($sDelim,split('',$sequence));
 		}
-		print $header,$extraField,$hashField,$lengthField,$sizeField,$delim,$q,$sequence,$q,"\n";
+		print $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,$sequence,$q,"\n";
 	} else {
-		print $header,$extraField,$hashField,$lengthField,$sizeField,$delim,$q,$sequence,$q,"\n";
+		print $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,$sequence,$q,"\n";
 	}
 }
 

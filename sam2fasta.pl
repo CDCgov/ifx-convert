@@ -227,38 +227,50 @@ if ( $useStorable ) {
 			if ( $amendMissing ) {
 				if ( defined($seqByID{$qname}) ) {
 
-					$aln2 = $preAln.$aln.$postAln; $offset = 0;
+					$unaligned = $preAln.$aln.$postAln; $offset = 0;
 					foreach $pos ( sort { $a <=> $b } keys(%{$inserts{$qname}}) ) {
 						$insert = $inserts{$qname}{$pos};
 
-						substr($aln2,$pos+$offset,0) = $insert;
+						substr($unaligned,$pos+$offset,0) = $insert;
 						$offset += length($insert);
 					}
-					$aln2 =~ tr/.-//d;
-					$original = $seqByID{$qname};
-					$O = length($original);
-					$L = length($aln);
-					if ( $original =~ /\Q$aln2\E/ ) {
-						($start,$stop) = ($-[0],$+[0]);
-						($preO,$postO) = ( $start, ($O - $stop) );
-						($preL,$postL) = (length($preAln),length($postAln));
-						
-						if ( $preL > $preO ) { $preM = $preO; } else { $preM = $preL; }
-						if ( $postL > $postO ) { $postM = $postO; } else { $postM = $postL; }
+					$unaligned =~ tr/.-//d;		# unaligned sequence, removing deletions and adding back insertions
 
-						if ( $preM > 0 && $preL < 10 ) {
-							$preAln = ($D x ($preL-$preM)) . substr($original,$start - $preM,$preM);
+					$original = $seqByID{$qname};
+					$O = length($original);		# length of the original query sequence
+					$L = length($aln);		# length of alignable sequence to the reference
+					if ( $original =~ /\Q$unaligned\E/ ) {
+
+						# Alignable sequence to Start & Stop in Original Sequence Coords
+						($start,$stop) = ($-[0],$+[0]);
+						# Nucleotide count between the alignable and original sequence on 5' & 3' ends (pre/post)
+						($preO,$postO) = ( $start, ($O - $stop) );
+						# Nucleotide count between the alignable and reference sequence on 5' & 3' ends (pre/post)
+						($preR,$postR) = (length($preAln),length($postAln));
+					
+						# The nucleotides to Move is the lesser of the available nucleotides from the original,
+						# and the nucleotides needed to complete the reference alignment.
+						if ( $preR > $preO ) { $preM = $preO; } else { $preM = $preR; }
+						if ( $postR > $postO ) { $postM = $postO; } else { $postM = $postR; }
+
+						# Only move over nucleotides if there are nucleotides that are movable.
+						# AND, the unalignable flanking region to the reference shall not exceed 9 nucleotides.
+						if ( $preM > 0 && $preR < 10 ) {
+							$preAln = ($D x ($preR-$preM)) . substr($original,$start - $preM,$preM);
 						}
 
-						if ( $postM > 0 && $postL < 10 ) {
-							$postAln = substr($original,$stop,$postM) . ($D x ($postL-$postM));
+						if ( $postM > 0 && $postR < 10 ) {
+							$postAln = substr($original,$stop,$postM) . ($D x ($postR-$postM));
+							# if insertions are to be added, the alignable position has been increased
+							$L += $postM;	
 						}
 					}
 
+					# We may also extend our alignment to the first stop, and write out 3' insertions to reference.
 					if ( defined($extendToStop) ) {
 						$suffix = $aln.$postAln;
 						$last3 = substr($suffix,-3);
-						if ( $last3 =~ /[A-Za-z]{3}/ && $last3 !~ /(TGA|TAA|TAG)/i ) {
+						if ( $last3 =~ /[A-Za-z]{3}/ && $last3 !~ /(TGA|TAA|TAG|TAR|TRA)/i ) {
 							if ( $original =~ /\Q$suffix\E/ ) {
 								$start2 = $+[0];
 								$tail  = substr($original,$start2,$O-$start2);
@@ -268,7 +280,7 @@ if ( $useStorable ) {
 									for($i=0;$i<$T;$i+=3) {
 										$codon = substr($tail,$i,3);
 										$codons .= $codon;
-										if ( $codon =~ m/(TGA|TAA|TAG)/i ) {
+										if ( $codon =~ m/(TGA|TAA|TAG|TAR|TRA)/i ) {
 											print INSRT $qname,"\t",$L,"\t",$codons,"\n";
 											last;
 										}

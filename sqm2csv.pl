@@ -73,9 +73,9 @@ if ( defined($vsList) ) {
 
 if ( !$vsList ) {	
 	if ( defined($vsX) ) {
-		print "vs $vsX,$distName\n";
+		print "vs $vsX$d$distName\n";
 	} else {
-		print "id1,id2,$distName\n";
+		print "id1${d}id2${d}$distName\n";
 	}
 }
 if ( defined($csv) ) {

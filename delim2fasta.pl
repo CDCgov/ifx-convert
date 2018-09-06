@@ -27,8 +27,9 @@ if ( !defined($outD) ) {
 # discover sequence field
 $/ = undef;
 @lines = split(/\r\n|\n|\r/, <>); chomp(@lines);
+if ( scalar(@lines) == 0 ) { exit(0); }
 if ( $jumpHeader ) { $junk = shift(@lines); }
-$firstLine = shift(@lines);
+$firstLine = $lines[0];
 @fields = split($inD,$firstLine);
 $maxLen = 0; $seqField  = 0;
 foreach $i ( 0 .. $#fields ) {
@@ -41,25 +42,6 @@ foreach $i ( 0 .. $#fields ) {
 		}
 	}
 }
-
-
-# output first line
-$seq = $fields[$seqField]; $header = '';
-foreach $i ( 0 .. $#fields ) {
-	if ( $i != $seqField ) {
-		if ( $header ne '' ) {
-			$header .= $outD.$fields[$i];
-		} else {
-			$header = $fields[$i];
-		}
-	}
-}
-$seq =~ tr/ //d;
-if ( $stripGaps ) {
-	$seq =~ tr/.:~-//d;
-}
-if ( substr($header,0,1) ne '>' ) { print '>'; }
-print $header,"\n",$seq,"\n";
 
 # loop over the rest
 foreach $line ( @lines ) {

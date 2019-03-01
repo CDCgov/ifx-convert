@@ -55,20 +55,21 @@ if ( defined($amendMissingFile) ) {
 	$amendMissing = 0;
 }
 
-
-$/ = ">"; $REF_NAME = $REF_SEQ = $REF_N = '';
+$/ = '>';
+my %references = ();
+my $REF_NAME = '';
 open(REF,'<',$ARGV[0]) or die("Cannot open $ARGV[0] for reading.\n");
 while($record = <REF>) {
 	chomp($record);
 	@lines = split(/\r\n|\n|\r/, $record);
 	$REF_NAME = shift(@lines);
 	$seq = join('',@lines);
-	if ( length($seq) < 1 ) {
+	$length = length($seq);
+	if ( $length < 1 ) {
 		next;
+	} else {
+		$references{$REF_NAME} = $length;
 	}
-	$REF_SEQ = [split('',uc($seq))];
-	$REF_N = length($seq);
-	last;
 }
 close(REF);
 
@@ -87,7 +88,6 @@ if ( $inlineInserts ) {
 	$D = '.'; $N = 'N';	
 }
 
-
 if ( $useStorable ) {
 	%pairs = %insByIndex = ();
 	for($K=0;$K<scalar(@sam);$K++) {
@@ -101,7 +101,8 @@ if ( $useStorable ) {
 			$qSide = $2;
 		}
 
-		if ( $REF_NAME eq $rn ) {
+		if ( defined($references{$rn}) ) {
+			$REF_N = $references{$rn};
 			@NTs = split('',uc($seq));
 			@QCs = split('',$qual);
 			@Qint = unpack("c* i*",$qual);
@@ -178,7 +179,8 @@ if ( $useStorable ) {
 			$qSide = $2;
 		}
 
-		if ( $REF_NAME eq $rn ) {
+		if ( defined($references{$rn}) ) {
+			$REF_N = $references{$rn};
 			@NTs = split('',uc($seq));
 			@cigars = split('',$cigar);
 			$rpos=$pos-1;

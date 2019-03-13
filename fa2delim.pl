@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 # Converts fasta to a delimited format
 
+use Digest::SHA qw(sha1_hex);
 use Digest::MD5 qw(md5_hex);
 use Getopt::Long;
 GetOptions( 
@@ -18,7 +19,9 @@ GetOptions(
 		'inserts|I=s' => \$insertsFile,
 		'use-original|O' => \$useOriginal,
 		'use-unaligned|U' => \$useUnaligned,
-		'show-if-insertion' => \$insertionApplied
+		'use-both|B' => \$useBoth,
+		'show-if-insertion' => \$insertionApplied,
+		'nt-id' => \$doNtID
 	);
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
@@ -35,10 +38,42 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t-I|--inserts <FILE>\tTab delimited insertion file: ID<t>NTS<T>AA\n";
 	$message .= "\t\t-U|--use-unaligned\tPrint unaligned sequence/sites: unaligned + ins. Def: aligned + ins\n";	
 	$message .= "\t\t-O|--use-original\tPrint aligned sequence/sites: aligned - ins. Def: aligned + ins\n";	
+	$message .= "\t\t-B|--use-both\t\tPrints unaligned and the original (aligned) sequences.\n";	
 	$message .= "\t\t-T|--codon-triplets\tAssumes data is in triplets for (-P and -S options).\n";
 	$message .= "\t\t   --show-if-insertion\tBoolean (true/false) added if insertion was put into the sequence.\n";
+	$message .= "\t\t   --nt-id\t\tPerform the nt_id instead of the variant_hash, given --add-hash option.\n";
 	die($message."\n");
 }
+
+
+# Take the nucleotide ID as reckoned by PubSeq
+sub nt_id2($) {
+	if ( defined($_[0]) && $_[0] ne '' ) {
+		my $seq = uc($_[0]);
+		$seq =~ tr/ :.~-//d;
+		return (sha1_hex($seq),$seq);
+	} else {
+		return ('\N','\N');
+	}
+}
+
+# Two argument version
+sub variant_hash2($) {
+	if ( defined($_[0]) && $_[0] ne '' ) {
+		my $seq = uc($_[0]);
+		$seq =~ tr/ :.-//d;
+		return (md5_hex($seq),$seq);
+	} else {
+		return ('\N','\N');
+	}
+}
+
+if ( defined($doNtID) ) {
+	*doHash = \&nt_id2;
+} else {
+	*doHash = \&variant_hash2;
+}
+
 
 if ( defined($sDelim) ) {
 	$singleLine = 1;
@@ -57,6 +92,14 @@ if ( $enclose ) {
 	$q = "'";
 } else {
 	$q = '';
+}
+
+if ( defined($useBoth) ) {
+	$useBoth = 1;
+	$useUnaligned = 1;
+	$useOriginal = 0;
+} else {
+	$useBoth = 0;
 }
 
 if ( !defined($name) ) {
@@ -81,7 +124,8 @@ if ( defined($insertsFile) ) {
 	$tryInsertions = 0;
 }
 
-$lengthField = ''; $hashField = ''; $hasInsertion = ''; $/ = ">";
+$/ = ">";
+my ($seqExtra,$lengthField,$hashField,$hasInsertion) = ('','','',''); 
 while( $record = <> ) {
 	chomp($record);
 	@lines = split(/\r\n|\n|\r/, $record);
@@ -114,10 +158,10 @@ while( $record = <> ) {
 	if ( $addLength ) { $lengthField = $delim.length($sequence); }
 
 	if ( $addSize || $addHash || $useUnaligned ) {
-		$sequenceForHash = $sequence; $sequenceForHash =~ tr/.-//d;
+		($hash,$sequenceForHash) = doHash($sequence);;
 		# the protein size does not include any alignment characters
 		if ( $addSize ) { $sizeField = $delim.length($sequenceForHash); }
-		if ( $addHash ) { $hashField = $delim.$q.md5_hex($sequenceForHash).$q; }
+		if ( $addHash ) { $hashField = $delim.$q.$hash.$q; }
 	}
 
 	if ( $useOriginal ) { 
@@ -133,11 +177,11 @@ while( $record = <> ) {
 		# one site/codon per record
 		if ( $triplets ) {
 			for( $pos=0;$pos<$length;$pos += 3 ) {
-				print $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
+				print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
 			}
 		} else {
 			for( $pos=0;$pos<$length;$pos++ ) {
-				print $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
+				print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
 			}
 		}
 	} elsif ( $singleLine ) {
@@ -147,9 +191,10 @@ while( $record = <> ) {
 		} else{
 			$sequence = join($sDelim,split('',$sequence));
 		}
-		print $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,$sequence,$q,"\n";
+		print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,$sequence,$q,"\n";
 	} else {
-		print $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,$sequence,$q,"\n";
+		$extraSeq = $useBoth ? $delim.$q.$sequenceOriginal.$q : '';
+		print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,$sequence,$q,$extraSeq,"\n";
 	}
 }
 

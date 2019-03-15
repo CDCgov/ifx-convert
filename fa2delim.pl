@@ -48,9 +48,9 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 
 # Take the nucleotide ID as reckoned by PubSeq
 sub nt_id2($) {
-	if ( defined($_[0]) && $_[0] ne '' ) {
-		my $seq = uc($_[0]);
-		$seq =~ tr/ :.~-//d;
+	my $seq = defined($_[0]) ? uc($_[0]) : '';
+	$seq =~ tr/ :.~-//d;
+	if ( $seq ne '' ) {
 		return (sha1_hex($seq),$seq);
 	} else {
 		return ('\N','\N');
@@ -59,9 +59,9 @@ sub nt_id2($) {
 
 # Two argument version
 sub variant_hash2($) {
-	if ( defined($_[0]) && $_[0] ne '' ) {
-		my $seq = uc($_[0]);
-		$seq =~ tr/ :.-//d;
+	my $seq = defined($_[0]) ? uc($_[0]) : '';
+	$seq =~ tr/ :.-//d;
+	if ( $seq ne '' ) {
 		return (md5_hex($seq),$seq);
 	} else {
 		return ('\N','\N');

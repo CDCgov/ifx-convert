@@ -156,7 +156,6 @@ while($record = <> ) {
 		$aa = '';
 		for( $i = 0; $i < $length; $i +=3 ) {
 			$codon = uc(substr($sequence, $i, 3));
-
 			if ( $codon =~ /[-.~]/ ) {
 				if ( $stripGapped ) {
 					next;
@@ -180,13 +179,12 @@ while($record = <> ) {
 				}
 			}
 		}
-
 		if ( $noEndCodon ) {
 			chop($aa);
 		}
 
 		if ( $chopDownstreamMissing ) {
-			$aa =~ s/(\.+)$//;
+			$aa =~ s/([^.])\.+$/$1/;
 		}
 
 		print '>',$header,"\n",$aa,"\n";

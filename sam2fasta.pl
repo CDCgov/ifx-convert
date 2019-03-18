@@ -228,7 +228,6 @@ if ( $useStorable ) {
 
 			if ( $amendMissing ) {
 				if ( defined($seqByID{$qname}) ) {
-
 					$unaligned = $preAln.$aln.$postAln; $offset = 0;
 					foreach $pos ( sort { $a <=> $b } keys(%{$inserts{$qname}}) ) {
 						$insert = $inserts{$qname}{$pos};
@@ -241,8 +240,8 @@ if ( $useStorable ) {
 					$original = $seqByID{$qname};
 					$O = length($original);		# length of the original query sequence
 					$L = length($aln);		# length of alignable sequence to the reference
-					if ( $original =~ /\Q$unaligned\E/ ) {
 
+					if ( $original =~ /\Q$unaligned\E/ ) {
 						# Alignable sequence to Start & Stop in Original Sequence Coords
 						($start,$stop) = ($-[0],$+[0]);
 						# Nucleotide count between the alignable and original sequence on 5' & 3' ends (pre/post)
@@ -283,7 +282,8 @@ if ( $useStorable ) {
 										$codon = substr($tail,$i,3);
 										$codons .= $codon;
 										if ( $codon =~ m/(TGA|TAA|TAG|TAR|TRA)/i ) {
-											print INSRT $qname,"\t",$L,"\t",$codons,"\n";
+											$lpadCount = ($preAln =~ m/^(\.+)/) ? length($1) : 0;
+											print INSRT $qname,"\t",($L+$lpadCount),"\t",$codons,"\n";
 											last;
 										}
 									}

@@ -140,9 +140,11 @@ while( $record = <> ) {
 		if ( $insertionApplied ) { $hasInsertion = $delim.'true'; }	
 		$offset = 0;
 		foreach $pos ( sort { $a <=> $b } keys(%{$inserts{$id}}) ) {
-			$insert = $inserts{$id}{$pos};
-			substr($sequence,int($pos)+$offset,0) = $insert;
-			$offset += length($insert);
+			if ( length($sequence) >= (int($pos)+$offset) ) 
+				$insert = $inserts{$id}{$pos};
+				substr($sequence,int($pos)+$offset,0) = $insert;
+				$offset += length($insert);
+			}
 		}
 	}
 

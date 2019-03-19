@@ -11,7 +11,8 @@ GetOptions(
 		'print-inline-inserts|I' => \$inlineInserts,
 		'amend-missing|M=s' => \$amendMissingFile,
 		'extend-to-stop|E' => \$extendToStop,
-		'reverse-complement|R' => \$rev
+		'reverse-complement|R' => \$rev,
+		'add-header-field|H=s' => \$headerField
 	);
 
 if ( scalar(@ARGV) != 3 && scalar(@ARGV) != 2 ) {
@@ -23,6 +24,7 @@ if ( scalar(@ARGV) != 3 && scalar(@ARGV) != 2 ) {
 	$message .= "\t\t-M|--amend-missing <FILE>\tAmend missing 5' and 3' from alignment using the original file.\n";
 	$message .= "\t\t-E|--extend-to-stop\t\tAssumes -M is used. Allows post-sequence insertion extension.\n";
 	$message .= "\t\t-R|--reverse-complement\t\tReverse complement the read if original was on complementary strand.\n";
+	$message .= "\t\t-H|--add-header-field <STR>\tAdds constant header field (pipe-delimited) to ID using specified argument.\n";
 	die($message."\n");
 }
 
@@ -35,6 +37,7 @@ if ( scalar(@ARGV) == 2 ) {
 
 $REisBase = qr/[ATCG]/;
 $REgetMolID = qr/(.+?)[_ ]([12]):.+/;
+$headerField = defined($headerField) ? '|'.$headerField : '';
 
 if ( defined($amendMissingFile) ) {
 	open(MISS,'<',$amendMissingFile) or die("Cannot open $amendMissingFile for reading.\n");
@@ -208,7 +211,7 @@ if ( $useStorable ) {
 					}
 				} elsif( $op eq 'I' ) {
 					if ( $inlineInserts ) { $aln .= lc(substr($seq,$qpos,$inc)); }
-					if ( $printInserts ) { print INSRT $qname,"\t",($rpos),"\t",substr($seq,$qpos,$inc),"\n"; }
+					if ( $printInserts ) { print INSRT $qname,$headerField,"\t",($rpos),"\t",substr($seq,$qpos,$inc),"\n"; }
 					if ( $amendMissing ) { $inserts{$qname}{$rpos} = substr($seq,$qpos,$inc); }
 					$qpos += $inc;
 				} elsif( $op eq 'S' ) {
@@ -283,7 +286,7 @@ if ( $useStorable ) {
 										$codons .= $codon;
 										if ( $codon =~ m/(TGA|TAA|TAG|TAR|TRA)/i ) {
 											$lpadCount = ($preAln =~ m/^(\.+)/) ? length($1) : 0;
-											print INSRT $qname,"\t",($L+$lpadCount),"\t",$codons,"\n";
+											print INSRT $qname,$headerField,"\t",($L+$lpadCount),"\t",$codons,"\n";
 											last;
 										}
 									}
@@ -294,7 +297,7 @@ if ( $useStorable ) {
 				}
 			}
 
-			print FASTA '>',$qname,"\n";
+			print FASTA '>',$qname,$headerField,"\n";
 			if ( defined($rev) && $flag == 16 ) {
 				$tmp = reverse($preAln.$aln.$postAln);
 				$tmp =~ tr/gcatrykmbvdhuGCATRYKMBVDHU/cgtayrmkvbhdaCGTAYRMKVBHDA/;

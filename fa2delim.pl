@@ -21,6 +21,7 @@ GetOptions(
 		'use-unaligned|U' => \$useUnaligned,
 		'use-both|B' => \$useBoth,
 		'show-if-insertion' => \$insertionApplied,
+		'show-shift-indel' => \$frameShifted,
 		'nt-id' => \$doNtID
 	);
 
@@ -41,6 +42,7 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t-B|--use-both\t\tPrints unaligned and the original (aligned) sequences.\n";	
 	$message .= "\t\t-T|--codon-triplets\tAssumes data is in triplets for (-P and -S options).\n";
 	$message .= "\t\t   --show-if-insertion\tBoolean (true/false) added if insertion was put into the sequence.\n";
+	$message .= "\t\t   --show-shift-indel\tBoolean (true/false) added if an indel not divisible by 3.\n";
 	$message .= "\t\t   --nt-id\t\tPerform the nt_id instead of the variant_hash, given --add-hash option.\n";
 	die($message."\n");
 }
@@ -124,8 +126,10 @@ if ( defined($insertsFile) ) {
 	$tryInsertions = 0;
 }
 
+
+
 $/ = ">";
-my ($seqExtra,$lengthField,$hashField,$hasInsertion) = ('','','',''); 
+my ($seqExtra,$lengthField,$hashField,$hasInsertion,$hasShifted,$hasShifted) = ('','','','',''); 
 while( $record = <> ) {
 	chomp($record);
 	@lines = split(/\r\n|\n|\r/, $record);
@@ -135,7 +139,8 @@ while( $record = <> ) {
 	if ( length($sequence) == 0 ) { next; }
 	if ( $enclose ) { $header =~ tr/'/\'/; $sequence =~ tr/'//d; }
 
-	if ( $insertionApplied ) { $hasInsertion = $delim.'false'; }	
+	if ( $insertionApplied ) 	{ $hasInsertion = $delim.'false'; }	
+	if ( $frameShifted ) 		{ $hasShifted 	= $delim.'false'; }	
 	if ( $tryInsertions && defined($inserts{$id}) ) {
 		if ( $insertionApplied ) { $hasInsertion = $delim.'true'; }	
 		$offset = 0;
@@ -144,7 +149,14 @@ while( $record = <> ) {
 				$insert = $inserts{$id}{$pos};
 				substr($sequence,int($pos)+$offset,0) = $insert;
 				$offset += length($insert);
+				if ( defined($frameShifted) && length($insert) % 3 != 0 ) { $hasShifted   = $delim.'true'; }
 			}
+		}
+	}
+
+	if ( $frameShifted ) {
+		while($sequenceOriginal =~ m/[^-](-+)[^-]/g ) {
+			if ( length($1) % 3 != 0 ) { $hasShifted   = $delim.'true'; }
 		}
 	}
 
@@ -179,11 +191,11 @@ while( $record = <> ) {
 		# one site/codon per record
 		if ( $triplets ) {
 			for( $pos=0;$pos<$length;$pos += 3 ) {
-				print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
+				print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$hasShifted,$delim,$q,(int($pos/3)+1),$q,$delim,$q,substr($sequence,$pos,3),$q,"\n";
 			}
 		} else {
 			for( $pos=0;$pos<$length;$pos++ ) {
-				print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
+				print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$hasShifted,$delim,$q,($pos+1),$q,$delim,$q,substr($sequence,$pos,1),$q,"\n";
 			}
 		}
 	} elsif ( $singleLine ) {
@@ -193,10 +205,10 @@ while( $record = <> ) {
 		} else{
 			$sequence = join($sDelim,split('',$sequence));
 		}
-		print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,$sequence,$q,"\n";
+		print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$hasShifted,$delim,$q,$sequence,$q,"\n";
 	} else {
 		$extraSeq = $useBoth ? $delim.$q.$sequenceOriginal.$q : '';
-		print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$delim,$q,$sequence,$q,$extraSeq,"\n";
+		print STDOUT $header,$extraField,$hashField,$lengthField,$sizeField,$hasInsertion,$hasShifted,$delim,$q,$sequence,$q,$extraSeq,"\n";
 	}
 }
 

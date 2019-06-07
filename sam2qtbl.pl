@@ -6,8 +6,7 @@ use Storable;
 use Getopt::Long;
 GetOptions(
 		'typical-alignment|T' => \$typicalFormat,
-		'reverse-complement|R' => \$rev,
-		'add-header-field|H=s' => \$headerField
+		'reverse-complement|R' => \$rev
 	);
 
 if ( scalar(@ARGV) != 3 && scalar(@ARGV) != 2 ) {
@@ -26,8 +25,7 @@ if ( scalar(@ARGV) == 2 ) {
 }
 
 $REisBase = qr/[ATCG]/;
-$REgetMolID = qr/(.+?)[_ ]([12]):.+/;
-$headerField = defined($headerField) ? '|'.$headerField : '';
+$REgetMolID = qr/(.+?)[_ ]([123]):.+/;
 
 $/ = '>';
 my %references = ();
@@ -70,7 +68,11 @@ for($K=0;$K<scalar(@sam);$K++) {
 	if ( $qname =~ $REgetMolID ) {
 		$qMolID = $1;
 		$qSide = $2;
+	} else {
+		$qMolID = $qname;
+		$qSide = '';
 	}
+
 	$strand = (($flag & 16) == 16) ? '-' : '+';
 
 	if ( defined($references{$rn}) ) {
@@ -87,7 +89,7 @@ for($K=0;$K<scalar(@sam);$K++) {
 			$op=$2;
 			if ( $op eq 'M' ) {
 				for(1..$inc) {
-					print STDOUT "MATCH\t",$qname,$headerField,"\t",($rpos),"\t",$NTs[$qpos],"\t",($QS[$1pos]-33),"\t",$strand,"\n";
+					print STDOUT $qMolID,"\t",$qSide,"\t",$op,"\t",($rpos+1),"\t",($qpos+1),"\t",$NTs[$qpos],"\t",($QS[$qpos]-33),"\t",$strand,"\n";
 					$qpos++; $rpos++;
 				}
 			} elsif ( $op eq 'D' ) {
@@ -97,11 +99,11 @@ for($K=0;$K<scalar(@sam);$K++) {
 				}
 			} elsif( $op eq 'I' ) {
 			    $q_insert = 0; 
-			    foreach my $x ( @QS[$qpos..($qpos+$inc-1)] ) {
-		        	$q += $x;
+			    foreach my $x ( @QS[($qpos+1)..($qpos+$inc)] ) {
+		        	$q_insert += $x;
 		        }
-		        $q = ($q-$inc*33)/$inc;
-				print STDOUT "INSERT\t",$qname,$headerField,"\t",($rpos),"\t",substr($seq,$qpos,$inc),"\t",$strand,"\t",$q_insert,"\n";
+		        $q_insert = ($q_insert-$inc*33)/$inc;
+				print STDOUT $qMolID,"\t",$qSide,"\t",$op,"\t",($rpos),"\t",($qpos+1),"\t",substr($seq,$qpos,$inc),"\t",$q_insert,"\t",$strand,"\n";
 				$qpos += $inc;
 			} elsif( $op eq 'S' ) {
 				$qpos += $inc;

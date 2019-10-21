@@ -284,9 +284,15 @@ if ( $useStorable ) {
 									for($i=0;$i<$T;$i+=3) {
 										$codon = substr($tail,$i,3);
 										$codons .= $codon;
+
 										if ( $codon =~ m/(TGA|TAA|TAG|TAR|TRA)/i ) {
-											$lpadCount = ($preAln =~ m/^(\.+)/) ? length($1) : 0;
-											print INSRT $qname,$headerField,"\t",($L+$lpadCount),"\t",$codons,"\n";
+											# Given that end of suffix is not empty, reference length (O) could be used.
+											# However, there may have been a reason in the original code not to do this.
+											# For the most part: L+len(preAln)+postM == O
+											# I theorize that for (suffix = aln) and postAln empty,  
+											# non-shunt extension may take place. If shunting occurs aln != suffix.
+											# Under that scenario it may be best to leave as-is.
+											print INSRT $qname,$headerField,"\t",($L+length($preAln)),"\t",$codons,"\n";
 											last;
 										}
 									}

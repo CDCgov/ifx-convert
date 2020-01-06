@@ -14,8 +14,13 @@ from pyarrow import csv
 input_table 	= sys.argv[1]
 output_parquet	= sys.argv[2]
 
+null_values = ["","#N/A","#N/AN/A","#NA","-1.#IND","-1.#QNAN","-NaN","-nan","1.#IND","1.#QNAN","N/A","NA","NULL","NaN","n/a","nan","null","\\N"]
+
 try:
-	table = csv.read_csv(input_table,parse_options = csv.ParseOptions(delimiter='\t'))
+	table = csv.read_csv(input_table, parse_options = csv.ParseOptions(delimiter='\t'), 
+		read_options = csv.ReadOptions(autogenerate_column_names = True),
+		convert_options = csv.ConvertOptions(null_values = null_values) ) 
+		
 except IOError:
 	print("Error reading/parsing: " + input_table)
 	exit(2)

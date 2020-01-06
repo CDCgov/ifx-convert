@@ -14,6 +14,8 @@ from pyarrow import csv
 input_table 	= sys.argv[1]
 output_parquet	= sys.argv[2]
 
+# Attribution: https://github.com/apache/arrow/blob/f7ef65e5fc367f1f5649dfcea0754e413fcca394/cpp/src/arrow/csv/options.cc#L28-L30
+# Added Impala-style null strings
 null_values = ["","#N/A","#N/AN/A","#NA","-1.#IND","-1.#QNAN","-NaN","-nan","1.#IND","1.#QNAN","N/A","NA","NULL","NaN","n/a","nan","null","\\N"]
 
 try:

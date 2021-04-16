@@ -22,7 +22,8 @@ GetOptions(
 		'use-both|B' => \$useBoth,
 		'show-if-insertion' => \$insertionApplied,
 		'show-shift-indel' => \$frameShifted,
-		'nt-id' => \$doNtID
+		'nt-id' => \$doNtID,
+        'fna-id' => \$fnaID
 	);
 
 if ( -t STDIN && ! scalar(@ARGV) ) {
@@ -44,6 +45,7 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 	$message .= "\t\t   --show-if-insertion\tBoolean (true/false) added if insertion was put into the sequence.\n";
 	$message .= "\t\t   --show-shift-indel\tBoolean (true/false) added if an indel not divisible by 3.\n";
 	$message .= "\t\t   --nt-id\t\tPerform the nt_id instead of the variant_hash, given --add-hash option.\n";
+	$message .= "\t\t   --fna-id\t\tGets the ID portion of the fasta header for NCBI fna files.\n";
 	die($message."\n");
 }
 
@@ -51,7 +53,7 @@ if ( -t STDIN && ! scalar(@ARGV) ) {
 # Take the nucleotide ID as reckoned by PubSeq
 sub nt_id2($) {
 	my $seq = defined($_[0]) ? uc($_[0]) : '';
-	$seq =~ tr/ :.~-//d;
+	$seq =~ tr/\n\r\t :.~-//d;
 	if ( $seq ne '' ) {
 		return (sha1_hex($seq),$seq);
 	} else {
@@ -62,7 +64,7 @@ sub nt_id2($) {
 # Two argument version
 sub variant_hash2($) {
 	my $seq = defined($_[0]) ? uc($_[0]) : '';
-	$seq =~ tr/ :.-//d;
+	$seq =~ tr/\n\r\t :.-//d;
 	if ( $seq ne '' ) {
 		return (md5_hex($seq),$seq);
 	} else {
@@ -138,6 +140,7 @@ while( $record = <> ) {
 
 	if ( length($sequence) == 0 ) { next; }
 	if ( $enclose ) { $header =~ tr/'/\'/; $sequence =~ tr/'//d; }
+    if ( $fnaID && $header =~ /^(\S+)\s/ ) { $header = $1; } 
 
 	if ( $insertionApplied ) 	{ $hasInsertion = $delim.'false'; }	
 	if ( $frameShifted ) 		{ $hasShifted 	= $delim.'false'; }	

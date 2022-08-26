@@ -137,9 +137,9 @@ if ( scalar @files > 0 ) {
             while ( my $line = <$handle> ) {
                 chomp($line);
                 $line =~ tr/\r//d;
-                $line =~ tr/,/\t/        if $convertCSV;
-                $line =~ s/\t$//smx      if $noEmptyEnd;
-                $line =~ s/\t$/$NULL/smx if $nullifyEnd;
+                $line =~ tr/,/\t/          if $convertCSV;
+                $line =~ s/\t$//smx        if $noEmptyEnd;
+                $line =~ s/\t$/\t$NULL/smx if $nullifyEnd;
 
                 print STDOUT $line;
                 print STDOUT $d, $globSetValue   if $printGlobSet;

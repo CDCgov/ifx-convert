@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+# Sam Shepard
 
 $/ = ">";
 while ( $record = <> ) {

@@ -21,16 +21,16 @@ GetOptions(
 
 if ( -t STDIN && scalar(@ARGV) != 1 ) {
     die(   "Usage:\n\tperl $PROGRAM_NAME <nts.fasta> [options]\n"
-         . "\t\t-S|--strip-gapped\tStrip gaps before translating.\n"
-         . "\t\t-W|--warning-skip\tSkip and print a warning rather than throwing an error.\n"
-         . "\t\t-N|--no-end\t\tSkip the last codon (useful when it is the stop site).\n"
-         . "\t\t-R|--read-frame-mode\tFind longest ORF in sequence for translation.\n"
-         . "\t\t-A|--adjust-gaps\tTry to adjust partial codons to be full codons.\n"
-         . "\t\t-P|--partial-codon\tUse '~' to express partial codons.\n"
-         . "\t\t-M|--missing-data\tUse '.' to express missing data.\n"
-         . "\t\t-T|--stop-translation\tEnd sequence after first stop codon.\n"
-         . "\t\t-U|--write-updated\tWrite updated nucleotide FASTA (as with '-T').\n"
-         . "\t\t-E|--end-3p-missing\tChop downstream missing.\n"
+         . "\t\t-S|--strip-gapped\t\tStrip gaps before translating.\n"
+         . "\t\t-W|--warning-skip\t\tSkip and print a warning rather than throwing an error.\n"
+         . "\t\t-N|--no-end\t\t\tSkip the last codon (useful when it is the stop site).\n"
+         . "\t\t-R|--read-frame-mode\t\tFind longest ORF in sequence for translation.\n"
+         . "\t\t-A|--adjust-gaps\t\tTry to adjust partial codons to be full codons.\n"
+         . "\t\t-P|--partial-codon\t\tUse '~' to express partial codons.\n"
+         . "\t\t-M|--missing-data\t\tUse '.' to express missing data.\n"
+         . "\t\t-T|--stop-translation\t\tEnd sequence after first stop codon.\n"
+         . "\t\t-U|--write-updated <FILE>\tWrite updated nucleotide FASTA (as with '-T').\n"
+         . "\t\t-E|--end-3p-missing\t\tChop downstream missing.\n"
          . "\n" );
 }
 

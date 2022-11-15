@@ -3,6 +3,7 @@
 # Version 1.0
 # Converts codons to amino acids.
 
+use English qw(-no_match_vars);
 use Getopt::Long;
 GetOptions(
             'strip-gapped|S'       => \$stripGapped,
@@ -14,21 +15,23 @@ GetOptions(
             'missing-data|M'       => \$missingData,
             'stop-translation|T'   => \$stopTranslation,
             'output-codons|C'      => \$codonsOnly,
-            'end-3p-missing|E'     => \$chopDownstreamMissing
+            'end-3p-missing|E'     => \$chopDownstreamMissing,
+            'write-updated-nt|U=s' => \$writeUpdated
 );
 
 if ( -t STDIN && scalar(@ARGV) != 1 ) {
-    $message = "Usage:\n\tperl $0 <nts.fasta> [options]\n";
-    $message .= "\t\t-S|--strip-gapped\tStrip gaps before translating.\n";
-    $message .= "\t\t-W|--warning-skip\tSkip and print a warning rather than throwing an error.\n";
-    $message .= "\t\t-N|--no-end\t\tSkip the last codon (useful when it is the stop site).\n";
-    $message .= "\t\t-R|--read-frame-mode\tFind longest ORF in sequence for translation.\n";
-    $message .= "\t\t-A|--adjust-gaps\tTry to adjust partial codons to be full codons.\n";
-    $message .= "\t\t-P|--partial-codon\tUse '~' to express partial codons.\n";
-    $message .= "\t\t-M|--missing-data\tUse '.' to express missing data.\n";
-    $message .= "\t\t-T|--stop-translation\tEnd sequence after first stop codon.\n";
-    $message .= "\t\t-E|--end-3p-missing\tChop downstream missing.\n";
-    die( $message . "\n" );
+    die(   "Usage:\n\tperl $PROGRAM_NAME <nts.fasta> [options]\n"
+         . "\t\t-S|--strip-gapped\tStrip gaps before translating.\n"
+         . "\t\t-W|--warning-skip\tSkip and print a warning rather than throwing an error.\n"
+         . "\t\t-N|--no-end\t\tSkip the last codon (useful when it is the stop site).\n"
+         . "\t\t-R|--read-frame-mode\tFind longest ORF in sequence for translation.\n"
+         . "\t\t-A|--adjust-gaps\tTry to adjust partial codons to be full codons.\n"
+         . "\t\t-P|--partial-codon\tUse '~' to express partial codons.\n"
+         . "\t\t-M|--missing-data\tUse '.' to express missing data.\n"
+         . "\t\t-T|--stop-translation\tEnd sequence after first stop codon.\n"
+         . "\t\t-U|--write-updated\tWrite updated nucleotide FASTA (as with '-T').\n"
+         . "\t\t-E|--end-3p-missing\tChop downstream missing.\n"
+         . "\n" );
 }
 
 # ambiguation mappings of nucleotides
@@ -241,13 +244,18 @@ if ( -t STDIN && scalar(@ARGV) != 1 ) {
         'TAY' => 'Y'
 );
 
+my $UPDATED;
+if ( defined $writeUpdated ) {
+    open( $UPDATED, '>', $writeUpdated ) or die("Cannot open '$writeUpdated' for writing: $OS_ERROR\n");
+}
+
 # Process records.
-$/ = ">";
+local $RS = ">";
 while ( $record = <> ) {
     chomp($record);
     @lines    = split( /\r\n|\n|\r/, $record );
     $header   = shift(@lines);
-    $sequence = join( '', @lines );
+    $sequence = join( q{}, @lines );
     $length   = length($sequence);
 
     if ( $length == 0 ) {
@@ -310,7 +318,7 @@ while ( $record = <> ) {
     }
 
     if ($codonsOnly) {
-        $codons = '';
+        $codons = q{};
         for ( $i = 0; $i < $length; $i += 3 ) {
             $codon = uc( substr( $sequence, $i, 3 ) );
             $codons .= $codon;
@@ -335,7 +343,8 @@ while ( $record = <> ) {
         print '>', $header, "\n", $codons, "\n";
 
     } else {
-        $aa = '';
+        $aa = q{};
+        my $new_length = $length;
         for ( $i = 0; $i < $length; $i += 3 ) {
             $codon = uc( substr( $sequence, $i, 3 ) );
             if ( $codon =~ /[-.~]/ ) {
@@ -350,27 +359,41 @@ while ( $record = <> ) {
                         $aa .= '-';
                     }
                 }
-            } elsif ( !defined( $gc{$codon} ) ) {
+            } elsif ( !defined $gc{$codon} ) {
                 $aa .= 'X';
             } else {
                 $aa .= $gc{$codon};
                 if ( $stopTranslation && $gc{$codon} eq '*' ) {
-
-                    #$leftOver = int( ($length-$i-3) / 3 );
-                    #$aa .= ':'x $leftOver;
+                    if ( defined $writeUpdated ) {
+                        $new_length = $i + 3;
+                    }
                     last;
                 }
             }
         }
+
         if ($noEndCodon) {
             chop($aa);
+            if ( defined $writeUpdated ) {
+                $new_length -= 3;
+            }
         }
 
         if ($chopDownstreamMissing) {
-            $aa =~ s/([^.])\.+$/$1/;
+            $aa =~ s/([^.])(\.+)$/$1/smx;
+            if ( defined $writeUpdated ) {
+                $new_length -= length($2) * 3;
+            }
         }
 
         print '>', $header, "\n", $aa, "\n";
+
+        if ( defined $writeUpdated ) {
+            print $UPDATED '>', $header, "\n", substr( $sequence, 0, $new_length ), "\n";
+        }
     }
 }
-close(IN);
+
+if ( defined $writeUpdated ) {
+    close $UPDATED or croak("Cannot close file: $OS_ERROR\n");
+}

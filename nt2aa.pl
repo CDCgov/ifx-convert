@@ -16,7 +16,8 @@ GetOptions(
             'stop-translation|T'   => \$stopTranslation,
             'output-codons|C'      => \$codonsOnly,
             'end-3p-missing|E'     => \$chopDownstreamMissing,
-            'write-updated-nt|U=s' => \$writeUpdated
+            'write-updated-nt|U=s' => \$writeUpdated,
+            'no-updated-nt-chop'   => \$noUpdatedNTChop
 );
 
 if ( -t STDIN && scalar(@ARGV) != 1 ) {
@@ -31,6 +32,7 @@ if ( -t STDIN && scalar(@ARGV) != 1 ) {
          . "\t\t-T|--stop-translation\t\tEnd sequence after first stop codon.\n"
          . "\t\t-U|--write-updated <FILE>\tWrite updated nucleotide FASTA (as with '-T').\n"
          . "\t\t-E|--end-3p-missing\t\tChop downstream missing.\n"
+         . "\t\t--no-updated-nt-chop\t\tPreserve any right padding for 3' missing data (assumes -U).\n"
          . "\n" );
 }
 
@@ -381,7 +383,7 @@ while ( $record = <> ) {
 
         if ($chopDownstreamMissing) {
             $aa =~ s/([^.])(\.+)$/$1/smx;
-            if ( defined $writeUpdated ) {
+            if ( defined $writeUpdated && !defined $noUpdatedNTChop ) {
                 $new_length -= length($2) * 3;
             }
         }

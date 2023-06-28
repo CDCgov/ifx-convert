@@ -4,6 +4,10 @@
 use Digest::SHA qw(sha1_hex);
 use Digest::MD5 qw(md5_hex);
 use Getopt::Long;
+use English qw(-no_match_vars);
+use Carp qw(croak);
+use warnings;
+
 GetOptions(
             'csv-format|C'      => \$CSV,
             'per-site|P'        => \$perSite,
@@ -27,7 +31,7 @@ GetOptions(
 );
 
 if ( -t STDIN && !scalar(@ARGV) ) {
-    $message = "Usage:\n\tperl $0 <annotated.fasta> [options]\n";
+    $message = "Usage:\n\tperl $PROGRAM_NAME <annotated.fasta> [options]\n";
     $message .= "\t\t-P|--per-site\t\tOne row per site.\n";
     $message .= "\t\t-E|--enclose\t\tEnclose fields in quotes.\n";
     $message .= "\t\t-C|--csv-format\t\tUse csv delimiter (tab default).\n";
@@ -50,10 +54,10 @@ if ( -t STDIN && !scalar(@ARGV) ) {
 }
 
 # Take the nucleotide ID as reckoned by PubSeq
-sub nt_id2($) {
-    my $seq = defined( $_[0] ) ? uc( $_[0] ) : '';
+sub nt_id2 {
+    my $seq = uc( shift // q{} );
     $seq =~ tr/\n\r\t :.~-//d;
-    if ( $seq ne '' ) {
+    if ( $seq ne q{} ) {
         return ( sha1_hex($seq), $seq );
     } else {
         return ( '\N', '\N' );
@@ -61,42 +65,53 @@ sub nt_id2($) {
 }
 
 # Two argument version
-sub variant_hash2($) {
-    my $seq = defined( $_[0] ) ? uc( $_[0] ) : '';
+sub variant_hash2 {
+    my $seq = uc( shift // q{} );
     $seq =~ tr/\n\r\t :.-//d;
-    if ( $seq ne '' ) {
+    if ( $seq ne q{} ) {
         return ( md5_hex($seq), $seq );
     } else {
         return ( '\N', '\N' );
     }
 }
 
-if ( defined($doNtID) ) {
+# Trim function.
+# Removes whitespace from the start and end of the string
+sub trim {
+    my $string = shift // q{};
+    if ( $string =~ /^\s*(.*?)\s*$/smx ) {
+        return $1;
+    } else {
+        return $string;
+    }
+}
+
+if ( defined $doNtID ) {
     *doHash = \&nt_id2;
 } else {
     *doHash = \&variant_hash2;
 }
 
-if ( defined($sDelim) ) {
+if ( defined $sDelim ) {
     $singleLine = 1;
 } else {
     $singleLine = 0;
 }
 
-if ( defined($CSV) ) {
+if ( defined $CSV ) {
     $delim   = ',';
     $enclose = 1;
-} elsif ( !defined($delim) ) {
+} elsif ( !defined $delim ) {
     $delim = "\t";
 }
 
 if ($enclose) {
     $q = "'";
 } else {
-    $q = '';
+    $q = q{};
 }
 
-if ( defined($useBoth) ) {
+if ( defined $useBoth ) {
     $useBoth      = 1;
     $useUnaligned = 1;
     $useOriginal  = 0;
@@ -104,17 +119,18 @@ if ( defined($useBoth) ) {
     $useBoth = 0;
 }
 
-if ( !defined($name) ) {
-    $extraField = "";
+if ( !defined $name ) {
+    $extraField = q{};
 } else {
     $extraField = $delim . $q . $name . $q;
 }
 
-if ( defined($insertsFile) ) {
+if ( defined $insertsFile ) {
     %inserts = ();
-    $/       = "\n";
-    open( INS, '<', $insertsFile ) or die("Cannot open $insertsTable for reading.\n");
-    @lines = <INS>;
+    local $RS = "\n";
+
+    open( my $INS, '<', $insertsFile ) or die("Cannot open $insertsFile for reading.\n");
+    @lines = <$INS>;
     chomp(@lines);
     foreach $line (@lines) {
         ( $id, $pos, $insert ) = split( "\t", $line );
@@ -123,48 +139,49 @@ if ( defined($insertsFile) ) {
         # ergo, no adjustment is needed for index-0
         $inserts{$id}{$pos} = $insert;
     }
-    close(INS);
+    close($INS) or croak("Cannot close file: $OS_ERROR");
     $tryInsertions = 1;
 } else {
     $tryInsertions = 0;
 }
 
-$/ = ">";
-my ( $seqExtra, $lengthField, $hashField, $hasInsertion, $hasShifted, $hasShifted ) = ( '', '', '', '', '' );
+local $RS = ">";
+my ( $seqExtra, $lengthField, $hashField, $hasInsertion, $hasShifted ) = ( q{}, q{}, q{}, q{}, q{} );
 while ( $record = <> ) {
     chomp($record);
-    @lines            = split( /\r\n|\n|\r/, $record );
+    @lines            = split( /\r\n|\n|\r/smx, $record );
     $id               = $header   = trim( shift(@lines) );
-    $sequenceOriginal = $sequence = uc( join( '', @lines ) );
+    $sequenceOriginal = $sequence = uc( join( q{}, @lines ) );
 
-    if ( length($sequence) == 0 )          { next; }
-    if ($enclose)                          { $header =~ tr/'/\'/; $sequence =~ tr/'//d; }
-    if ( $fnaID && $header =~ /^(\S+)\s/ ) { $header = $1; }
+    if ( length($sequence) == 0 )             { next; }
+    if ($enclose)                             { $header =~ tr/'/\'/; $sequence =~ tr/'//d; }
+    if ( $fnaID && $header =~ /^(\S+)\s/smx ) { $header = $1; }
 
     if ($insertionApplied) { $hasInsertion = $delim . 'false'; }
     if ($frameShifted)     { $hasShifted   = $delim . 'false'; }
-    if ( $tryInsertions && defined( $inserts{$id} ) ) {
-        if ($insertionApplied) { $hasInsertion = $delim . 'true'; }
+    if ( $tryInsertions && defined $inserts{$id} ) {
+        $sequence =~ s/[.]+$//smx;
         $offset = 0;
-        foreach $pos ( sort { $a <=> $b } keys( %{ $inserts{$id} } ) ) {
+        foreach my $pos ( sort { $a <=> $b } keys( %{ $inserts{$id} } ) ) {
             if ( length($sequence) >= ( int($pos) + $offset ) ) {
                 $insert = $inserts{$id}{$pos};
-                substr( $sequence, int($pos) + $offset, 0 ) = $insert;
+                substr( $sequence, int($pos) + $offset, 0, $insert );
                 $offset += length($insert);
-                if ( defined($frameShifted) && length($insert) % 3 != 0 ) { $hasShifted = $delim . 'true'; }
+                if ( defined $frameShifted && length($insert) % 3 != 0 ) { $hasShifted   = $delim . 'true'; }
+                if ($insertionApplied)                                   { $hasInsertion = $delim . 'true'; }
             }
         }
     }
 
     if ($frameShifted) {
-        while ( $sequenceOriginal =~ m/[^-](-+)[^-]/g ) {
+        while ( $sequenceOriginal =~ m/[^-](-+)[^-]/gsmx ) {
             if ( length($1) % 3 != 0 ) { $hasShifted = $delim . 'true'; }
         }
     }
 
     if ($headerDelim) {
-        @fields = split( /\Q$headerDelim\E/, $header );
-        for ( $i = 0; $i < scalar(@fields); $i++ ) {
+        @fields = split( /\Q$headerDelim\E/smx, $header );
+        foreach my $i ( 0 .. $#fields ) {
             $fields[$i] = $q . $fields[$i] . $q;
         }
         $header = join( $delim, @fields );
@@ -194,37 +211,32 @@ while ( $record = <> ) {
 
         # one site/codon per record
         if ($triplets) {
-            for ( $pos = 0; $pos < $length; $pos += 3 ) {
-                print STDOUT $header, $extraField, $hashField, $lengthField, $sizeField, $hasInsertion, $hasShifted, $delim,
-                  $q, ( int( $pos / 3 ) + 1 ), $q, $delim, $q, substr( $sequence, $pos, 3 ), $q, "\n";
+
+            ## no critic (ControlStructures::ProhibitCStyleForLoops)
+            for ( my $pos = 0; $pos < $length; $pos += 3 ) {
+                print STDOUT $header, $extraField, $hashField // q{}, $lengthField, $sizeField // q{}, $hasInsertion,
+                  $hasShifted, $delim, $q, ( int( $pos / 3 ) + 1 ), $q, $delim, $q, substr( $sequence, $pos, 3 ), $q, "\n";
             }
         } else {
-            for ( $pos = 0; $pos < $length; $pos++ ) {
-                print STDOUT $header, $extraField, $hashField, $lengthField, $sizeField, $hasInsertion, $hasShifted, $delim,
-                  $q, ( $pos + 1 ), $q, $delim, $q, substr( $sequence, $pos, 1 ), $q, "\n";
+            foreach my $pos ( 0 .. ( $length - 1 ) ) {
+                print STDOUT $header, $extraField, $hashField // q{}, $lengthField, $sizeField // q{}, $hasInsertion,
+                  $hasShifted, $delim, $q, ( $pos + 1 ), $q, $delim, $q, substr( $sequence, $pos, 1 ), $q, "\n";
             }
         }
     } elsif ($singleLine) {
 
         # one sequence per record
         if ($triplets) {
-            $sequence = join( $sDelim, ( $sequence =~ /.{3}/g ) );
+            $sequence = join( $sDelim, ( $sequence =~ /.{3}/gsmx ) );
         } else {
-            $sequence = join( $sDelim, split( '', $sequence ) );
+            $sequence = join( $sDelim, split( q{}, $sequence ) );
         }
-        print STDOUT $header, $extraField, $hashField, $lengthField, $sizeField, $hasInsertion, $hasShifted, $delim, $q,
-          $sequence, $q, "\n";
+        print STDOUT $header, $extraField, $hashField // q{}, $lengthField, $sizeField // q{}, $hasInsertion, $hasShifted,
+          $delim, $q, $sequence, $q, "\n";
     } else {
-        $extraSeq = $useBoth ? $delim . $q . $sequenceOriginal . $q : '';
-        print STDOUT $header, $extraField, $hashField, $lengthField, $sizeField, $hasInsertion, $hasShifted, $delim, $q,
-          $sequence, $q, $extraSeq, "\n";
+        $extraSeq = $useBoth ? $delim . $q . $sequenceOriginal . $q : q{};
+        print STDOUT $header, $extraField, $hashField // q{}, $lengthField, $sizeField // q{}, $hasInsertion, $hasShifted,
+          $delim, $q, $sequence, $q, $extraSeq, "\n";
     }
 }
 
-# Trim function.
-# # Removes whitespace from the start and end of the string
-sub trim($) {
-    my $string = shift;
-    $string =~ /^\s*(.*?)\s*$/;
-    return $1;
-}

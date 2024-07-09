@@ -16,6 +16,7 @@ A collection of miscellaneous conversion scripts. Most involve file format conve
 | S. S. Shepard                                    | `delim2fasta.pl`      | TSV                  | FASTA                 | Used by [DAIS-ribosome](https://git.biotech.cdc.gov/flu-informatics/dais-ribosome)|
 | S. S. Shepard                                    | `fa2delim.pl`         | FASTA                | TSV                   | Used by [DAIS-ribosome](https://git.biotech.cdc.gov/flu-informatics/dais-ribosome)|
 | S. S. Shepard                                    | `fa2fastq.pl`         | FASTA                | FASTQ                 | Minimal. For reverse, see also fastQ-converter in [IRMA](https://git.biotech.cdc.gov/vfn4/irma) and [IRMA-core](https://git.biotech.cdc.gov/vfn4/irma-core)|
+| D. E. Hufnagel    |   `genbank2Fasta.py`    |   GenBank |   FASTA |
 | S. S. Shepard                                    | `nt2aa.pl`            | NT FASTA             | AA FASTA              | Amino acid translation. Used by [DAIS-ribosome](https://git.biotech.cdc.gov/flu-informatics/dais-ribosome)|
 | S. S. Shepard                                    | `sam2fasta.pl`        | SAM                  | FASTA                 | Used by [DAIS-ribosome](https://git.biotech.cdc.gov/flu-informatics/dais-ribosome)|
 | S. S. Shepard                                    | `sam2qtbl.pl`         | SAM                  | TSV                   | Quality table for diagnostics                       |

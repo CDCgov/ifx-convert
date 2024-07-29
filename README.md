@@ -4,11 +4,11 @@
 
 This is the public repository to host CDC/NCIRD/ID Informatics conversion scripts. Most involve file format conversions though some may involve other types of conversion such as time format.
 
-This repository is maintained by Sam S. Shepard and David E. Hufnagel.
+This repository is maintained by Sam S. Shepard and David E. Hufnagel. For direct correspondence, feel free to contact: Samuel S. Shepard (vfn4@cdc.gov), Centers for Disease Control and Prevention
 
 ## License
 
-This work is protected by the Apache 2.0 Licence. see LICENCE. Overall this means that these scripts can be used for any legal purpose including copying, modifying, or selling this code by internal or external parties so long as credit is given to the original authors. To meet this requirement please cite this github page when referring to code hosted here or when buliding code from this code.
+This work is licensed under Apache 2.0 Licence. see LICENCE. Overall this means that these scripts can be used for any legal purpose including copying, modifying, or selling this code by internal or external parties so long as credit is given to the original authors. To meet this requirement please cite this github page when referring to code hosted here or when buliding code from this code.
 
 ## Brief descriptions
 

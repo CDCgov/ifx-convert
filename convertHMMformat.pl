@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# Not written by SSS, found online.
+# Martin Madera, with assistance from Julian Gough
 
 my $usage = "Usage: convert.pl <input file>\n";
 

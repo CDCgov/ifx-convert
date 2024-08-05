@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
-# Sam Shepard -- print sam as fasta format
-# 3.2014
+# Sam Shepard - 2014
+# Print sam as fasta format
 
 use Storable;
 use Getopt::Long;

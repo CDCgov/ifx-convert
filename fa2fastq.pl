@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
-# Sam Shepard
+# Sam Shepard - 2014
+# Converts FASTA to FASTQ trivially.
 
 $/ = ">";
 while ( $record = <> ) {

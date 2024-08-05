@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Sam Shepard - 2020.01
+# Sam Shepard - 2020
 # See defaults and options: https://arrow.apache.org/docs/python/index.html
 
 import sys

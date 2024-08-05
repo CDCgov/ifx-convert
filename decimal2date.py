@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# Sam Shepard - 4.26.2011 - decimalDate.py
+# Sam Shepard - 2011
+#
 # Converts fasta file with header format: >date_virus
 # To the decimal date format used by beast.
 # Ported from the decimalDate.php by Justin Bahl & Yongmei Liu.

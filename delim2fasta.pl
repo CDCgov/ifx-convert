@@ -1,4 +1,6 @@
 #!/usr/bin/env perl
+# Sam Shepard - 2016
+# Delimited file to FASTA format. Attempts to deduct the sequence field.
 
 use Getopt::Long;
 GetOptions(

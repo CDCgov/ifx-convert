@@ -1,6 +1,5 @@
 #!/usr/bin/perl
-# decimalDate.pl - Sam Shepard - 2011.26.08
-# version 1.1
+# Sam Shepard - 2011
 # Converts normal dates into the decimal format.
 
 use Getopt::Long;

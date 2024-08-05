@@ -1,6 +1,8 @@
 # ifx-convert: a small software collection of bioinformatics conversion utilities
 
-`ifx-convert`is a small software collection of bioinformatics conversion utilities used by CDC/NCIRD/ID Informatics. Most involve file format conversions though some may involve other types of conversion such as time format. This repository is maintained by Sam S. Shepard and David E. Hufnagel. For direct correspondence, feel free to contact: [Samuel S. Shepard](mailto:vfn4@cdc.gov), Centers for Disease Control and Prevention
+`ifx-convert` is a small software collection of bioinformatics conversion utilities used by CDC/NCIRD/ID Informatics. Most involve file format conversions though some may involve other types of conversion such as time format.
+
+For direct correspondence, feel free to contact: [Samuel S. Shepard](mailto:vfn4@cdc.gov), Centers for Disease Control and Prevention
 
 ## Brief descriptions
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
-# Sam Shepard -- print sam as quality table for diagnostics
-# 6.2019
+# Sam Shepard - 2019
+# Print sam as quality table for diagnostics
 
 use Storable;
 use Getopt::Long;

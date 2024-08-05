@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 ## no critic (ValuesAndExpressions::ProhibitConstantPragma,ControlStructures::ProhibitPostfixControls)
-# Sam Shepard
+# Sam Shepard - 2022
+# Collation tool for delimited files.
 
 use strict;
 use warnings;

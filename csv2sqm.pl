@@ -1,4 +1,6 @@
 #!/usr/bin/env perl
+# Sam Shepard - 2016
+# Converts a CSV with IDs and distances into a square distance matrix.
 
 use Getopt::Long;
 GetOptions( 'annotation-field|A' => \$annotField,

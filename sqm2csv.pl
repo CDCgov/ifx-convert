@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 # Sam Shepard - 2013
+# Square distance matrix to CSV format
 
 use Getopt::Long;
 GetOptions(

@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+# Sam Shepard - 2016
 # Converts fasta to a delimited format
 
 use Digest::SHA qw(sha1_hex);

@@ -1,9 +1,6 @@
 #!/usr/bin/perl
-# Samuel Shepard - 7.2011
-# date2Epiweek.pl
+# Samuel Shepard - 2011
 # Converts dates to Epiweek.
-
-# Version 1.
 
 use Getopt::Long;
 GetOptions(

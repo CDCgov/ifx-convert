@@ -62,13 +62,14 @@ if ( -t STDIN && scalar(@ARGV) != 1 ) {
         . "\t\t-S|--strip-gapped\t\tStrip gaps before translating.\n"
         . "\t\t-W|--warning-skip\t\tSkip and print a warning rather than throwing an error.\n"
         . "\t\t-N|--no-end\t\t\tSkip the last codon (useful when it is the stop site).\n"
-        . "\t\t-R|--read-frame-mode\t\tFind longest ORF in sequence for translation.\n"
+        . "\t\t-R|--reading-frame-mode\t\tFind longest ORF in sequence for translation.\n"
         . "\t\t-A|--adjust-gaps\t\tTry to adjust partial codons to be full codons.\n"
         . "\t\t-P|--partial-codon\t\tUse '~' to express partial codons.\n"
         . "\t\t-M|--missing-data\t\tUse '.' to express missing data.\n"
         . "\t\t-T|--stop-translation\t\tEnd sequence after first stop codon.\n"
-        . "\t\t-U|--write-updated <FILE>\tWrite updated nucleotide FASTA (as with '-T').\n"
+        . "\t\t-U|--write-updated-nt <FILE>\tWrite updated nucleotide FASTA (as with '-T').\n"
         . "\t\t-E|--end-3p-missing\t\tChop downstream missing.\n"
+        . "\t\t-C|--output-codons\t\tOutputs the codon sequence instead of the translated amino acids.\n"
         . "\t\t--right-pad-cds\t\t\tPreserve any right padding for 3' missing data (masking CDS for early termination). Assumes -U.\n"
         . "\n" );
 }
@@ -90,7 +91,16 @@ if ( -t STDIN && scalar(@ARGV) != 1 ) {
 	'TCH'=>'S','TCK'=>'S','TCM'=>'S','TCN'=>'S','TCR'=>'S','TCS'=>'S','TCT'=>'S','TCV'=>'S','TCW'=>'S','TCY'=>'S','ACA'=>'T',
 	'ACB'=>'T','ACC'=>'T','ACD'=>'T','ACG'=>'T','ACH'=>'T','ACK'=>'T','ACM'=>'T','ACN'=>'T','ACR'=>'T','ACS'=>'T','ACT'=>'T',
 	'ACV'=>'T','ACW'=>'T','ACY'=>'T','GTA'=>'V','GTB'=>'V','GTC'=>'V','GTD'=>'V','GTG'=>'V','GTH'=>'V','GTK'=>'V','GTM'=>'V',
-	'GTN'=>'V','GTR'=>'V','GTS'=>'V','GTT'=>'V','GTV'=>'V','GTW'=>'V','GTY'=>'V','TGG'=>'W','TAC'=>'Y','TAT'=>'Y','TAY'=>'Y'
+	'GTN'=>'V','GTR'=>'V','GTS'=>'V','GTT'=>'V','GTV'=>'V','GTW'=>'V','GTY'=>'V','TGG'=>'W','TAC'=>'Y','TAT'=>'Y','TAY'=>'Y',
+
+    'UAA'=>'*','UAG'=>'*','UAR'=>'*','UGA'=>'*','URA'=>'*','GCU'=>'A','UGC'=>'C','UGU'=>'C','UGY'=>'C','GAU'=>'D','UUC'=>'F',
+    'UUU'=>'F','UUY'=>'F','GGU'=>'G','CAU'=>'H','AUA'=>'I','AUC'=>'I','AUH'=>'I','AUM'=>'I','AUU'=>'I','AUW'=>'I','AUY'=>'I',
+    'CUA'=>'L','CUB'=>'L','CUC'=>'L','CUD'=>'L','CUG'=>'L','CUH'=>'L','CUK'=>'L','CUM'=>'L','CUN'=>'L','CUR'=>'L','CUS'=>'L',
+    'CUU'=>'L','CUV'=>'L','CUW'=>'L','CUY'=>'L','UUA'=>'L','UUG'=>'L','UUR'=>'L','YUA'=>'L','YUG'=>'L','YUR'=>'L','AUG'=>'M',
+    'AAU'=>'N','CCU'=>'P','CGU'=>'R','AGU'=>'S','UCA'=>'S','UCB'=>'S','UCC'=>'S','UCD'=>'S','UCG'=>'S','UCH'=>'S','UCK'=>'S',
+    'UCM'=>'S','UCN'=>'S','UCR'=>'S','UCS'=>'S','UCU'=>'S','UCV'=>'S','UCW'=>'S','UCY'=>'S','ACU'=>'T','GUA'=>'V','GUB'=>'V',
+    'GUC'=>'V','GUD'=>'V','GUG'=>'V','GUH'=>'V','GUK'=>'V','GUM'=>'V','GUN'=>'V','GUR'=>'V','GUS'=>'V','GUU'=>'V','GUV'=>'V',
+    'GUW'=>'V','GUY'=>'V','UGG'=>'W','UAC'=>'Y','UAU'=>'Y','UAY'=>'Y'
 );
 #>>>
 

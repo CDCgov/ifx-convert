@@ -59,7 +59,7 @@ GetOptions(
 
 if ( -t STDIN && scalar(@ARGV) != 1 ) {
     die(  "Usage:\n\tperl $PROGRAM_NAME <nts.fasta> [options]\n"
-        . "\t\t-S|--strip-gapped\t\tStrip gaps before translating.\n"
+        . "\t\t-S|--strip-gapped\t\tStrip any codons containing gaps before translating.\n"
         . "\t\t-W|--warning-skip\t\tSkip and print a warning rather than throwing an error.\n"
         . "\t\t-N|--no-end\t\t\tSkip the last codon (useful when it is the stop site).\n"
         . "\t\t-R|--reading-frame-mode\t\tFind longest ORF in sequence for translation.\n"
@@ -68,7 +68,7 @@ if ( -t STDIN && scalar(@ARGV) != 1 ) {
         . "\t\t-M|--missing-data\t\tUse '.' to express missing data.\n"
         . "\t\t-T|--stop-translation\t\tEnd sequence after first stop codon.\n"
         . "\t\t-U|--write-updated-nt <FILE>\tWrite updated nucleotide FASTA (as with '-T').\n"
-        . "\t\t-E|--end-3p-missing\t\tChop downstream missing.\n"
+        . "\t\t-E|--end-3p-missing\t\tChop downstream missing codons from the right end of the sequence. This includes '...', '--.', etc.\n"
         . "\t\t-C|--output-codons\t\tOutputs the codon sequence instead of the translated amino acids.\n"
         . "\t\t--right-pad-cds\t\t\tPreserve any right padding for 3' missing data (masking CDS for early termination). Assumes -U.\n"
         . "\n" );
@@ -192,7 +192,7 @@ while ( $record = <> ) {
         }
 
         if ($chopDownstreamMissing) {
-            $codons =~ s/(\.{3})+$//smx;
+            $codons =~ s/(?:[.][.-]{2}|[.-][.][.-]|[.-]{2}[.])+$//smx;
         }
 
         if ( length($codons) % 3 != 0 ) {
@@ -214,8 +214,10 @@ while ( $record = <> ) {
                         $aa .= '.';
                     } elsif ( $usePartialCodons && $codon =~ /[^.~-]/smx ) {
                         $aa .= '~';
-                    } else {
+                    } elsif ( $codon eq '---' || ! $missingData) {
                         $aa .= '-';
+                    } else {
+                        $aa .= '.';
                     }
                 }
             } elsif ( !defined $gc{$codon} ) {

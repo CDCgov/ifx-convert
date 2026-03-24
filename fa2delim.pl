@@ -48,7 +48,7 @@ if ( -t STDIN && !scalar(@ARGV) ) {
     $message .= "\t\t-B|--use-both\t\tPrints unaligned and the original (aligned) sequences.\n";
     $message .= "\t\t-T|--codon-triplets\tAssumes data is in triplets for (-P and -S options).\n";
     $message .= "\t\t   --show-if-insertion\tBoolean (true/false) added if insertion was put into the sequence.\n";
-    $message .= "\t\t   --show-shift-indel\tBoolean (true/false) added if an indel not divisible by 3.\n";
+    $message .= "\t\t   --show-shift-indel\tBoolean (true/false) added if a non-trailing indel is not divisible by 3.\n";
     $message .= "\t\t   --nt-id\t\tPerform the nt_id instead of the variant_hash, given --add-hash option.\n";
     $message .= "\t\t   --fna-id\t\tGets the ID portion of the fasta header for NCBI fna files.\n";
     die( $message . "\n" );
@@ -175,7 +175,7 @@ while ( $record = <> ) {
     }
 
     if ($frameShifted) {
-        while ( $sequenceOriginal =~ m/[^-](-+)[^-]/gsmx ) {
+        while ( $sequenceOriginal =~ m/[^.-](-+)[^.-]/gsmx ) {
             if ( length($1) % 3 != 0 ) { $hasShifted = $delim . 'true'; }
         }
     }

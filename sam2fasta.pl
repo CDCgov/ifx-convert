@@ -237,84 +237,90 @@ if ($useStorable) {
                 }
             }
 
-            $postAln = '';
             $postAln = $D x ( ($REF_N) - $rpos );
+            $len_unextended_right = $REF_N - $rpos;
 
             if ($amendMissing) {
                 if ( defined( $seqByID{$qname} ) ) {
-                    $unaligned = $preAln . $aln . $postAln;
-                    $offset    = 0;
-                    foreach $pos ( sort { $a <=> $b } keys( %{ $inserts{$qname} } ) ) {
-                        $insert = $inserts{$qname}{$pos};
+                    if ( $cigar =~ /^(?:\d+H)?(?:(\d+)S)?(?:\d+[MIDNP])*(?:(\d+)S)?(?:\d+H)?$/ ) {
+                        $clip_start = $1 // 0;
+                        $clip_end = $2 // 0;
 
-                        substr( $unaligned, $pos + $offset, 0 ) = $insert;
-                        $offset += length($insert);
-                    }
-                    $unaligned =~ tr/.-//d;    # unaligned sequence, removing deletions and adding back insertions
+                        $original = $seqByID{$qname};
+                        $O        = length($original);    # length of the original query sequence
+                        $L        = length($aln);         # length of alignable sequence to the reference
 
-                    $original = $seqByID{$qname};
-                    $O        = length($original);    # length of the original query sequence
-                    $L        = length($aln);         # length of alignable sequence to the reference
+                        if ( $original =~ /\Q$seq\E/ ) {
 
-                    if ( $original =~ /\Q$unaligned\E/ ) {
+                            # Alignable sequence start and stop coordinate
+                            # within original sequence coordinates
+                            $start = $-[0] + $clip_start;
+                            
+                            # This will be incorrect if the CIGAR string is
+                            # malformed and contains clipping in the middle
+                            $query_bases_consumed = $qpos - $clip_start - $clip_end;
+                            
+                            $stop = $start + $query_bases_consumed;
 
-                        # Alignable sequence to Start & Stop in Original Sequence Coords
-                        ( $start, $stop ) = ( $-[0], $+[0] );
+                            # Nucleotide count between the alignable and original sequence on 5' & 3' ends (pre/post)
+                            ( $preO, $postO ) = ( $start, ( $O - $stop ) );
 
-                        # Nucleotide count between the alignable and original sequence on 5' & 3' ends (pre/post)
-                        ( $preO, $postO ) = ( $start, ( $O - $stop ) );
+                            # Nucleotide count between the alignable and reference sequence on 5' & 3' ends (pre/post)
+                            ( $preR, $postR ) = ( length($preAln), length($postAln) );
 
-                        # Nucleotide count between the alignable and reference sequence on 5' & 3' ends (pre/post)
-                        ( $preR, $postR ) = ( length($preAln), length($postAln) );
+                            # The nucleotides to Move is the lesser of the available nucleotides from the original,
+                            # and the nucleotides needed to complete the reference alignment.
+                            if   ( $preR > $preO ) { $preM = $preO; }
+                            else                   { $preM = $preR; }
+                            if   ( $postR > $postO ) { $postM = $postO; }
+                            else                     { $postM = $postR; }
 
-                        # The nucleotides to Move is the lesser of the available nucleotides from the original,
-                        # and the nucleotides needed to complete the reference alignment.
-                        if   ( $preR > $preO ) { $preM = $preO; }
-                        else                   { $preM = $preR; }
-                        if   ( $postR > $postO ) { $postM = $postO; }
-                        else                     { $postM = $postR; }
+                            # Only move over nucleotides if there are nucleotides that are movable.
+                            # AND, the unalignable flanking region to the reference shall not exceed 9 nucleotides.
+                            if ( $preM > 0 && $preR < 10 ) {
+                                $preAln = ( $D x ( $preR - $preM ) ) . substr( $original, $start - $preM, $preM );
+                                $start_extended = $start - $preM;
+                            } else {
+                                $start_extended = $start;
+                            }
 
-                        # Only move over nucleotides if there are nucleotides that are movable.
-                        # AND, the unalignable flanking region to the reference shall not exceed 9 nucleotides.
-                        if ( $preM > 0 && $preR < 10 ) {
-                            $preAln = ( $D x ( $preR - $preM ) ) . substr( $original, $start - $preM, $preM );
-                        }
+                            if ( $postM > 0 && $postR < 10 ) {
+                                $postAln = substr( $original, $stop, $postM ) . ( $D x ( $postR - $postM ) );
+                                $len_unextended_right = $postR - $postM;
+                                $stop_extended = $stop + $postM;
 
-                        if ( $postM > 0 && $postR < 10 ) {
-                            $postAln = substr( $original, $stop, $postM ) . ( $D x ( $postR - $postM ) );
+                                # if insertions are to be added, the alignable position has been increased
+                                $L += $postM;
+                            } else {
+                                $stop_extended = $stop;
+                            }
 
-                            # if insertions are to be added, the alignable position has been increased
-                            $L += $postM;
-                        }
-                    }
+                            # We may also extend our alignment to the first stop, and write out 3' insertions to reference.
+                            if ( defined($extendToStop) && $len_unextended_right == 0 ) {
+                                $suffix = substr( $original, $start_extended, $stop_extended - $start_extended);
+                                $last3  = substr( $suffix, -3 );
+                                if ( $last3 =~ /[A-Za-z]{3}/ && $last3 !~ /(TGA|TAA|TAG|TAR|TRA)/i ) {
+                                    $tail   = substr( $original, $stop_extended, $O - $stop_extended );
+                                    $T      = length($tail);
+                                    if ( $T >= 3 ) {
+                                        $i      = 0;
+                                        $codons = '';
+                                        for ( $i = 0; $i < $T; $i += 3 ) {
+                                            $codon = substr( $tail, $i, 3 );
+                                            $codons .= $codon;
 
-                    # We may also extend our alignment to the first stop, and write out 3' insertions to reference.
-                    if ( defined($extendToStop) ) {
-                        $suffix = $aln . $postAln;
-                        $last3  = substr( $suffix, -3 );
-                        if ( $last3 =~ /[A-Za-z]{3}/ && $last3 !~ /(TGA|TAA|TAG|TAR|TRA)/i ) {
-                            if ( $original =~ /\Q$suffix\E/ ) {
-                                $start2 = $+[0];
-                                $tail   = substr( $original, $start2, $O - $start2 );
-                                $T      = length($tail);
-                                if ( $T >= 3 ) {
-                                    $i      = 0;
-                                    $codons = '';
-                                    for ( $i = 0; $i < $T; $i += 3 ) {
-                                        $codon = substr( $tail, $i, 3 );
-                                        $codons .= $codon;
+                                            if ( $codon =~ m/(TGA|TAA|TAG|TAR|TRA)/i ) {
 
-                                        if ( $codon =~ m/(TGA|TAA|TAG|TAR|TRA)/i ) {
-
-                                            # Given that end of suffix is not empty, reference length (O) could be used.
-                                            # However, there may have been a reason in the original code not to do this.
-                                            # For the most part: L+len(preAln)+postM == O
-                                            # I theorize that for (suffix = aln) and postAln empty,
-                                            # non-shunt extension may take place. If shunting occurs aln != suffix.
-                                            # Under that scenario it may be best to leave as-is.
-                                            print INSRT $qname, $headerField, "\t", ( $L + length($preAln) ), "\t", $codons,
-                                              "\n";
-                                            last;
+                                                # Given that end of suffix is not empty, reference length (O) could be used.
+                                                # However, there may have been a reason in the original code not to do this.
+                                                # For the most part: L+len(preAln)+postM == O
+                                                # I theorize that for (suffix = aln) and postAln empty,
+                                                # non-shunt extension may take place. If shunting occurs aln != suffix.
+                                                # Under that scenario it may be best to leave as-is.
+                                                print INSRT $qname, $headerField, "\t", ( $L + length($preAln) ), "\t", $codons,
+                                                "\n";
+                                                last;
+                                            }
                                         }
                                     }
                                 }

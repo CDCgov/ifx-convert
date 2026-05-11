@@ -164,7 +164,7 @@ while ( $record = <> ) {
         $sequence =~ s/[.]+$//smx;
         $offset = 0;
         foreach my $pos ( sort { $a <=> $b } keys( %{ $inserts{$id} } ) ) {
-            if ( length($sequence) >= ( int($pos) + $offset ) ) {
+            if ( length($sequence) > ( int($pos) + $offset ) || ( ( length($sequence) == ( int($pos) + $offset ) ) && substr($sequence, -1) ne '*' ) ) {
                 $insert = $inserts{$id}{$pos};
                 substr( $sequence, int($pos) + $offset, 0, $insert );
                 $offset += length($insert);
